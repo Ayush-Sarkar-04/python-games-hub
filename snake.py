@@ -10,6 +10,9 @@ HARD_SPEED = 0.08
 SPEED_INCREMENT = 0.003
 MIN_SPEED = 0.045
 FOOD_SCORE = 10
+BONUS_SCORE = 30
+SLOW_DURATION = 5.0
+POWERUP_CHANCE = 0.18
 PAUSE_POLL_INTERVAL = 0.03
 INITIAL_SNAKE = [(ROWS // 2, COLUMNS // 2),
                  (ROWS // 2, COLUMNS // 2 - 1),
@@ -51,7 +54,7 @@ def create_food(snake):
         if (row, column) not in snake
     ]
     return random.choice(available_positions)
-def display_board(snake, food, score):
+def display_board(snake, food, score, powerup=None, powerup_type=None):
     snake_head = snake[0]
     snake_body = set(snake[1:])
     print("+" + "---" * COLUMNS + "+")
@@ -65,6 +68,8 @@ def display_board(snake, food, score):
                 symbol = "O"
             elif position == food:
                 symbol = "*"
+            elif position == powerup:
+                symbol = "+" if powerup_type == "bonus" else "-"
             else:
                 symbol = " "
             line += f" {symbol} "
@@ -73,6 +78,7 @@ def display_board(snake, food, score):
     print("+" + "---" * COLUMNS + "+")
     print(f"Score: {score}")
     print("Controls: W/A/S/D or Arrow Keys | P = Pause | Q = Quit")
+    print("Power-ups: + = Bonus Score | - = Slow Down")
 def choose_difficulty():
     while True:
         clear_screen()
@@ -160,21 +166,32 @@ def move_snake(snake, direction):
     )
     snake.insert(0, new_head)
     return new_head
-def collision_detected(snake):
+def collision_detected(snake, wrap=False):
     head_row, head_column = snake[0]
-    if not (0 <= head_row < ROWS and 0 <= head_column < COLUMNS):
+    if wrap:
+        snake[0] = (head_row % ROWS, head_column % COLUMNS)
+    elif not (0 <= head_row < ROWS and 0 <= head_column < COLUMNS):
         return True
     return snake[0] in snake[1:]
+def choose_wrap_mode():
+    while True:
+        choice = input("\nEnable wrap-around walls? (y/n): ").strip().lower()
+        if choice in ("y", "n"):
+            return choice == "y"
+        print("Please enter Y or N.")
 def display_pause():
     print()
     print("GAME PAUSED")
     print("Press P to continue.")
-def play_game(difficulty_name, base_speed):
+def play_game(difficulty_name, base_speed, wrap=False):
     snake = list(INITIAL_SNAKE)
     direction = "RIGHT"
     food = create_food(snake)
+    powerup = None
+    powerup_type = None
     score = 0
     speed = base_speed
+    slow_until = 0
     original_terminal_settings = setup_terminal()
     try:
         while True:
@@ -182,7 +199,7 @@ def play_game(difficulty_name, base_speed):
             display_title()
             print(f"Difficulty: {difficulty_name}")
             print()
-            display_board(snake, food, score)
+            display_board(snake, food, score, powerup, powerup_type)
             key = read_key()
             if key == "q":
                 return "quit", score
@@ -202,15 +219,26 @@ def play_game(difficulty_name, base_speed):
             ):
                 direction = new_direction
             move_snake(snake, direction)
-            if collision_detected(snake):
+            if collision_detected(snake, wrap):
                 return "game_over", score
             if snake[0] == food:
                 score += FOOD_SCORE
                 food = create_food(snake)
                 speed = max(MIN_SPEED, speed - SPEED_INCREMENT)
+                if random.random() < POWERUP_CHANCE:
+                    powerup = create_food(snake + [food])
+                    powerup_type = random.choice(("bonus", "slow"))
+            elif powerup and snake[0] == powerup:
+                if powerup_type == "bonus":
+                    score += BONUS_SCORE
+                else:
+                    slow_until = time.time() + SLOW_DURATION
+                powerup = None
+                powerup_type = None
             else:
                 snake.pop()
-            time.sleep(speed)
+            current_speed = speed * 1.5 if time.time() < slow_until else speed
+            time.sleep(current_speed)
     finally:
         restore_terminal(original_terminal_settings)
 def display_game_over(score, difficulty_name):
@@ -232,7 +260,8 @@ def play_again():
 def main(record_result=None):
     while True:
         difficulty_name, base_speed = choose_difficulty()
-        status, score = play_game(difficulty_name, base_speed)
+        wrap = choose_wrap_mode()
+        status, score = play_game(difficulty_name, base_speed, wrap)
         if record_result:
             record_result("snake", status, score)
         if status == "quit":

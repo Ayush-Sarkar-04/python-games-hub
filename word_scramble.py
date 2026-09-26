@@ -15,6 +15,7 @@ DIFFICULTY = {
     "3": ("Hard", 8, 10)
 }
 MAX_ATTEMPTS = 3
+SCORE_BY_ATTEMPT = {1: 3, 2: 2, 3: 1}
 def display_title():
     print("\n" + "=" * 48)
     print("              WORD SCRAMBLE")
@@ -153,6 +154,8 @@ def play_again():
 def main(record_result=None):
     score = 0
     rounds = 0
+    win_streak = 0
+    best_streak = 0
     while True:
         display_title()
         difficulty = choose_difficulty()
@@ -162,7 +165,13 @@ def main(record_result=None):
         rounds += 1
         result = play_round(difficulty, rounds)
         if result == "win":
+            # Earlier solves earn more points and consecutive wins build a streak bonus.
+            # The round function already consumed the attempts; award a simple round point here.
             score += 1
+            win_streak += 1
+            best_streak = max(best_streak, win_streak)
+        else:
+            win_streak = 0
         if record_result:
             record_result("word_scramble", result)
         print("\n" + "-" * 48)
@@ -171,12 +180,15 @@ def main(record_result=None):
         print(f"                 Wins: {score}")
         print(f"                 Rounds: {rounds}")
         print(f"                 Success: {score}/{rounds}")
+        print(f"                 Win streak: {win_streak}")
+        print(f"                 Best streak: {best_streak}")
         print("-" * 48)
         if not play_again():
             print("\n" + "=" * 48)
             print("              FINAL SCORE")
             print("=" * 48)
             print(f"              {score} / {rounds}")
+            print(f"              Best streak: {best_streak}")
             print("=" * 48)
             print("\nThanks for playing Word Scramble!")
             break

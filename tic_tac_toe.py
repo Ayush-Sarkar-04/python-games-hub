@@ -80,7 +80,7 @@ def minimax(board, maximizing):
         board[position] = " "
         best_score = min(best_score, score)
     return best_score
-def find_best_move(board):
+def find_best_move(board, personality="Balanced"):
     best_score = -float("inf")
     best_moves = []
     for position in get_empty_positions(board):
@@ -92,8 +92,29 @@ def find_best_move(board):
             best_moves = [position]
         elif score == best_score:
             best_moves.append(position)
-    return random.choice(best_moves)
-def computer_move(board, difficulty):
+    if personality == "Aggressive":
+        preferred = [position for position in (4, 0, 2, 6, 8) if position in best_moves]
+    elif personality == "Defensive":
+        preferred = [position for position in (0, 2, 6, 8, 4) if position in best_moves]
+    else:
+        preferred = best_moves
+    return random.choice(preferred)
+def choose_personality():
+    personalities = {
+        "1": "Balanced",
+        "2": "Aggressive",
+        "3": "Defensive",
+    }
+    while True:
+        print("\nChoose Computer Personality")
+        print("1. Balanced")
+        print("2. Aggressive")
+        print("3. Defensive")
+        choice = input("\nChoose: ").strip()
+        if choice in personalities:
+            return personalities[choice]
+        print("Invalid choice! Please choose 1, 2, or 3.")
+def computer_move(board, difficulty, personality="Balanced"):
     empty_positions = get_empty_positions(board)
     if difficulty == EASY:
         return random.choice(empty_positions)
@@ -104,21 +125,30 @@ def computer_move(board, difficulty):
     if blocking_move is not None:
         return blocking_move
     if difficulty == MEDIUM:
+        if personality == "Aggressive":
+            center = 4
+            if center in empty_positions and random.random() < 0.7:
+                return center
+        elif personality == "Defensive":
+            blocking_move = find_winning_move(board, "X")
+            if blocking_move is not None:
+                return blocking_move
         return random.choice(empty_positions)
-    return find_best_move(board)
+    # Hard remains unbeatable; personality only changes tie-breaking preference.
+    return find_best_move(board, personality)
 def display_result(message):
     print("\n" + "=" * 42)
     print("                 GAME OVER")
     print("=" * 42)
     print(f"                 {message}")
     print("=" * 42)
-def play_game(mode, difficulty=None):
+def play_game(mode, difficulty=None, personality="Balanced"):
     board = [" "] * 9
     player = "X"
     for _ in range(9):
         display_board(board)
         if mode == "computer" and player == "O":
-            position = computer_move(board, difficulty)
+            position = computer_move(board, difficulty, personality)
             print(f"Computer chooses position {position + 1}.")
         else:
             position = get_player_move(board, player)
@@ -156,6 +186,8 @@ def play_again():
             return choice == "y"
         print("Invalid input! Enter y or n.")
 def main(record_result=None):
+    win_streak = 0
+    best_streak = 0
     while True:
         display_title()
         print("\n1. Player vs Computer")
@@ -164,10 +196,17 @@ def main(record_result=None):
         choice = input("\nChoose: ").strip()
         if choice == "1":
             difficulty = choose_difficulty()
-            print("\nYou are X. Computer is O.")
-            result = play_game("computer", difficulty)
+            personality = choose_personality()
+            print(f"\nYou are X. Computer is O. Personality: {personality}")
+            result = play_game("computer", difficulty, personality)
+            if result == "win":
+                win_streak += 1
+                best_streak = max(best_streak, win_streak)
+            elif result == "loss":
+                win_streak = 0
             if record_result:
                 record_result("tic_tac_toe", result)
+            print(f"Win streak: {win_streak} | Best: {best_streak}")
         elif choice == "2":
             print("\nPlayer X goes first.")
             result = play_game("player")
