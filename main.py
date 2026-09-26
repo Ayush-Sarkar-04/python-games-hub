@@ -10,38 +10,71 @@ GAME_CONFIG = {
     "1": {
         "name": "Tic-Tac-Toe",
         "module": tic_tac_toe,
+        "description": "Classic 3x3 strategy game",
         "stats": {"played": 0, "wins": 0, "losses": 0, "draws": 0},
-        "fields": [("Played", "played"), ("Wins", "wins"), ("Losses", "losses"), ("Draws", "draws")],
+        "fields": [
+            ("Played", "played"),
+            ("Wins", "wins"),
+            ("Losses", "losses"),
+            ("Draws", "draws"),
+        ],
     },
     "2": {
         "name": "Hangman",
         "module": hangman,
+        "description": "Guess the hidden word before you run out of attempts",
         "stats": {"played": 0, "wins": 0, "losses": 0},
-        "fields": [("Played", "played"), ("Wins", "wins"), ("Losses", "losses")],
+        "fields": [
+            ("Played", "played"),
+            ("Wins", "wins"),
+            ("Losses", "losses"),
+        ],
     },
     "3": {
         "name": "Rock Paper Scissors",
         "module": rock_paper_scissors,
+        "description": "Classic RPS with optional Lizard & Spock",
         "stats": {"played": 0, "wins": 0, "losses": 0, "draws": 0},
-        "fields": [("Games/Matches", "played"), ("Wins", "wins"), ("Losses", "losses"), ("Draws", "draws")],
+        "fields": [
+            ("Games/Matches", "played"),
+            ("Wins", "wins"),
+            ("Losses", "losses"),
+            ("Draws", "draws"),
+        ],
     },
     "4": {
         "name": "Word Scramble",
         "module": word_scramble,
+        "description": "Unscramble words across multiple difficulty levels",
         "stats": {"rounds": 0, "wins": 0, "losses": 0},
-        "fields": [("Rounds", "rounds"), ("Wins", "wins"), ("Losses", "losses")],
+        "fields": [
+            ("Rounds", "rounds"),
+            ("Wins", "wins"),
+            ("Losses", "losses"),
+        ],
     },
     "5": {
         "name": "Connect Four",
         "module": connect_four,
+        "description": "Connect four pieces before your opponent",
         "stats": {"played": 0, "wins": 0, "losses": 0, "draws": 0},
-        "fields": [("Played", "played"), ("Wins", "wins"), ("Losses", "losses"), ("Draws", "draws")],
+        "fields": [
+            ("Played", "played"),
+            ("Wins", "wins"),
+            ("Losses", "losses"),
+            ("Draws", "draws"),
+        ],
     },
     "6": {
         "name": "Snake",
         "module": snake,
+        "description": "Classic terminal Snake with score-based play",
         "stats": {"games": 0, "best_score": 0, "total_score": 0},
-        "fields": [("Games", "games"), ("Best Score", "best_score"), ("Total Score", "total_score")],
+        "fields": [
+            ("Games", "games"),
+            ("Best Score", "best_score"),
+            ("Total Score", "total_score"),
+        ],
     },
 }
 SCOREBOARD_FILE = Path(__file__).with_name("scoreboard.json")
@@ -113,40 +146,53 @@ class Scoreboard:
             stats["draws"] += 1
         self.save()
     def display(self):
-        """Display all session statistics."""
-        print("\n" + "=" * 52)
-        print("                  UNIFIED SCOREBOARD")
-        print("=" * 52)
+        """Display all saved game statistics."""
+        print("\n" + "=" * 64)
+        print("                     UNIFIED SCOREBOARD")
+        print("=" * 64)
         for config in GAME_CONFIG.values():
             game_name = config["name"]
             stats = self.stats[game_name]
-            print(f"\n{game_name}")
+            print(f"\n  {game_name}")
+            print(f"  {config['description']}")
+            print("  " + "-" * 58)
             for label, key in config["fields"]:
-                print(f"  {label + ':':<15}{stats[key]}")
-        print("\n" + "=" * 52)
+                print(f"    {label:<16} {stats[key]}")
+        print("\n" + "=" * 64)
 def display_title():
-    print("\n" + "=" * 52)
-    print("                 PYTHON GAMES HUB")
-    print("=" * 52)
-    print("             Choose a game to play")
-    print("=" * 52)
+    print("\n" + "=" * 64)
+    print("                     PYTHON GAMES HUB")
+    print("=" * 64)
+    print("                 Six classic Python games")
+    print("              Choose a game to start playing")
+    print("=" * 64)
+def display_game_menu():
+    """Display the main hub menu."""
+    print("\n" + "-" * 64)
+    print("                         GAMES")
+    print("-" * 64)
+    for choice, config in GAME_CONFIG.items():
+        print(f"  {choice}. {config['name']:<24} - {config['description']}")
+    scoreboard_choice = str(len(GAME_CONFIG) + 1)
+    exit_choice = str(len(GAME_CONFIG) + 2)
+    print(f"\n  {scoreboard_choice}. Unified Scoreboard")
+    print(f"  {exit_choice}. Exit")
+    print("-" * 64)
+    return scoreboard_choice, exit_choice
 def main():
     scoreboard = Scoreboard()
     scoreboard_choice = str(len(GAME_CONFIG) + 1)
     exit_choice = str(len(GAME_CONFIG) + 2)
     while True:
         display_title()
-        for choice, config in GAME_CONFIG.items():
-            print(f"{choice}. {config['name']}")
-        print(f"{scoreboard_choice}. Unified Scoreboard")
-        print(f"{exit_choice}. Exit")
-        choice = input("\nChoose: ").strip()
+        menu_scoreboard_choice, menu_exit_choice = display_game_menu()
+        choice = input("\nChoose an option: ").strip()
         if choice in GAME_CONFIG:
             GAME_CONFIG[choice]["module"].main(scoreboard.record)
-        elif choice == scoreboard_choice:
+        elif choice == menu_scoreboard_choice:
             scoreboard.display()
             input("\nPress Enter to return to the hub...")
-        elif choice == exit_choice:
+        elif choice == menu_exit_choice:
             print("\nThanks for playing!")
             break
         else:
