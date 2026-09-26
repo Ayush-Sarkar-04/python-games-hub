@@ -8,12 +8,10 @@ COMPUTER = "O"
 EASY = "1"
 MEDIUM = "2"
 HARD = "3"
-
 WIN_SCORE = 100
 THREE_SCORE = 8
 TWO_SCORE = 3
 OPPONENT_THREE_PENALTY = 7
-
 DIFFICULTIES = {
     EASY: "Easy",
     MEDIUM: "Medium",
@@ -55,11 +53,17 @@ def check_winner(board, piece):
                 return True
     for row in range(ROWS - 3):
         for column in range(COLUMNS - 3):
-            if all(board[row + offset][column + offset] == piece for offset in range(4)):
+            if all(
+                board[row + offset][column + offset] == piece
+                for offset in range(4)
+            ):
                 return True
     for row in range(3, ROWS):
         for column in range(COLUMNS - 3):
-            if all(board[row - offset][column + offset] == piece for offset in range(4)):
+            if all(
+                board[row - offset][column + offset] == piece
+                for offset in range(4)
+            ):
                 return True
     return False
 def board_full(board):
@@ -147,13 +151,16 @@ def minimax(board, depth, maximizing):
         return None, -1000000 - depth
     if not valid_columns or depth == 0:
         return None, evaluate_board(board, COMPUTER)
+
     if maximizing:
         best_score = -math.inf
         best_columns = []
+
         for column in valid_columns:
             test_board = [row[:] for row in board]
             simulate_move(test_board, column, COMPUTER)
             _, score = minimax(test_board, depth - 1, False)
+
             if score > best_score:
                 best_score = score
                 best_columns = [column]
@@ -209,11 +216,28 @@ def choose_difficulty():
         if choice in DIFFICULTIES:
             return choice
         print("Invalid choice! Please choose 1, 2, or 3.")
-def play_game(mode, difficulty=None):
+def choose_first_player(mode):
+    print("\nWho goes first?")
+    if mode == "computer":
+        print("  1. Player")
+        print("  2. Computer")
+    else:
+        print("  1. Player X")
+        print("  2. Player O")
+    while True:
+        choice = input("\nChoose: ").strip()
+        if choice in ("1", "2"):
+            if mode == "computer":
+                return PLAYER if choice == "1" else COMPUTER
+            return PLAYER if choice == "1" else "O"
+        print("Invalid choice! Please choose 1 or 2.")
+def play_game(mode, difficulty=None, first_player=PLAYER):
     board = create_board()
-    current_player = PLAYER
+    current_player = first_player
+    turn_number = 1
     while True:
         display_board(board)
+        print(f"Turn: {turn_number}")
         if mode == "computer" and current_player == COMPUTER:
             column = computer_move(board, difficulty)
             simulate_move(board, column, COMPUTER)
@@ -224,15 +248,20 @@ def play_game(mode, difficulty=None):
         if check_winner(board, current_player):
             display_board(board)
             if mode == "computer" and current_player == COMPUTER:
-                display_result("Computer wins!")
+                display_result(
+                    f"Computer wins in {turn_number} turns!"
+                )
                 return "loss"
-            display_result(f"Player {current_player} wins!")
+            display_result(
+                f"Player {current_player} wins in {turn_number} turns!"
+            )
             return "win"
         if board_full(board):
             display_board(board)
-            display_result("It's a draw!")
+            display_result(f"It's a draw after {turn_number} turns!")
             return "draw"
         current_player = COMPUTER if current_player == PLAYER else PLAYER
+        turn_number += 1
 def play_again():
     while True:
         choice = input("\nPlay again? (y/n): ").strip().lower()
@@ -248,15 +277,24 @@ def main(record_result=None):
         choice = input("\nChoose: ").strip()
         if choice == "1":
             difficulty = choose_difficulty()
-            print("\nYou are X. Computer is O.")
-            result = play_game("computer", difficulty)
+            first_player = choose_first_player("computer")
+            if first_player == PLAYER:
+                print("\nYou are X. Computer is O.")
+            else:
+                print("\nComputer is X. You are O.")
+
+            result = play_game("computer", difficulty, first_player)
             if record_result:
                 record_result("connect_four", result)
         elif choice == "2":
-            print("\nPlayer X goes first.")
-            result = play_game("player")
+            first_player = choose_first_player("player")
+            print(f"\nPlayer {first_player} goes first.")
+
+            result = play_game("player", first_player=first_player)
+
             if record_result:
                 record_result("connect_four", result)
+
         elif choice == "3":
             print("\nThanks for playing Connect Four!")
             break
