@@ -1,9 +1,7 @@
 import random
-
 EASY = "1"
 MEDIUM = "2"
 HARD = "3"
-
 WINNING_COMBINATIONS = [
     (0, 1, 2), (3, 4, 5), (6, 7, 8),
     (0, 3, 6), (1, 4, 7), (2, 5, 8),
@@ -26,11 +24,13 @@ def display_board(board):
     print("     ------+-------+------")
     print(f"       {cells[6]:^5}|{cells[7]:^7}|{cells[8]:^5}")
     print()
-def check_winner(board):
+def get_winner(board):
     for a, b, c in WINNING_COMBINATIONS:
         if board[a] == board[b] == board[c] and board[a] != " ":
-            return True
-    return False
+            return board[a]
+    return None
+def check_winner(board):
+    return get_winner(board) is not None
 def get_player_move(board, player):
     while True:
         choice = input(f"Player {player}, choose a position (1-9): ").strip()
@@ -56,6 +56,43 @@ def find_winning_move(board, player):
             return position
         board[position] = " "
     return None
+def minimax(board, maximizing):
+    winner = get_winner(board)
+    if winner == "O":
+        return 1
+    if winner == "X":
+        return -1
+    empty_positions = get_empty_positions(board)
+    if not empty_positions:
+        return 0
+    if maximizing:
+        best_score = -float("inf")
+        for position in empty_positions:
+            board[position] = "O"
+            score = minimax(board, False)
+            board[position] = " "
+            best_score = max(best_score, score)
+        return best_score
+    best_score = float("inf")
+    for position in empty_positions:
+        board[position] = "X"
+        score = minimax(board, True)
+        board[position] = " "
+        best_score = min(best_score, score)
+    return best_score
+def find_best_move(board):
+    best_score = -float("inf")
+    best_moves = []
+    for position in get_empty_positions(board):
+        board[position] = "O"
+        score = minimax(board, False)
+        board[position] = " "
+        if score > best_score:
+            best_score = score
+            best_moves = [position]
+        elif score == best_score:
+            best_moves.append(position)
+    return random.choice(best_moves)
 def computer_move(board, difficulty):
     empty_positions = get_empty_positions(board)
     if difficulty == EASY:
@@ -68,13 +105,7 @@ def computer_move(board, difficulty):
         return blocking_move
     if difficulty == MEDIUM:
         return random.choice(empty_positions)
-    if board[4] == " ":
-        return 4
-    corners = [0, 2, 6, 8]
-    free_corners = [corner for corner in corners if board[corner] == " "]
-    if free_corners:
-        return random.choice(free_corners)
-    return random.choice(empty_positions)
+    return find_best_move(board)
 def display_result(message):
     print("\n" + "=" * 42)
     print("                 GAME OVER")
