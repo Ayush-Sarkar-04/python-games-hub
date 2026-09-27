@@ -4,6 +4,8 @@ __pycache__/
 venv/
 .env
 .DS_Store
-scoreboard.json
 .pytest_cache/
-gameplan.md.game_data/
+.game_data/
+scoreboard.json
+gameplan.md
+player_summary.md
