@@ -101,7 +101,6 @@ def choose_word(words, category, difficulty):
             word for word in words[category]["words"]
             if word.isalpha()
         ]
-
     return random.choice(eligible_words)
 def display_word(word, guessed):
     display = ""
@@ -186,6 +185,12 @@ def play_game(words, streak=0):
             print(f"Hint revealed: {hint.upper()} (-1 attempt)")
             if attempts == 0:
                 print("The hint used your last attempt.")
+                if word_complete(word, guessed):
+                    print("\n" + "=" * 40)
+                    print("             YOU WON!")
+                    print("=" * 40)
+                    print("You solved:", word.upper(), "(via hint)")
+                    return "win"
             continue
         if len(guess) != 1 or not guess.isalpha():
             print("Invalid input! Enter ONE letter only, or H for a hint.")

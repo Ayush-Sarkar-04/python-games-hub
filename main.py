@@ -1,201 +1,211 @@
-import json
-from pathlib import Path
-import connect_four
-import hangman
-import rock_paper_scissors
-import snake
-import tic_tac_toe
-import word_scramble
-GAME_CONFIG = {
-    "1": {
-        "name": "Tic-Tac-Toe",
-        "module": tic_tac_toe,
-        "description": "Classic 3x3 strategy game",
-        "stats": {"played": 0, "wins": 0, "losses": 0, "draws": 0},
-        "fields": [
-            ("Played", "played"),
-            ("Wins", "wins"),
-            ("Losses", "losses"),
-            ("Draws", "draws"),
-        ],
-    },
-    "2": {
-        "name": "Hangman",
-        "module": hangman,
-        "description": "Guess the hidden word before you run out of attempts",
-        "stats": {"played": 0, "wins": 0, "losses": 0},
-        "fields": [
-            ("Played", "played"),
-            ("Wins", "wins"),
-            ("Losses", "losses"),
-        ],
-    },
-    "3": {
-        "name": "Rock Paper Scissors",
-        "module": rock_paper_scissors,
-        "description": "Classic RPS with optional Lizard & Spock",
-        "stats": {"played": 0, "wins": 0, "losses": 0, "draws": 0},
-        "fields": [
-            ("Games/Matches", "played"),
-            ("Wins", "wins"),
-            ("Losses", "losses"),
-            ("Draws", "draws"),
-        ],
-    },
-    "4": {
-        "name": "Word Scramble",
-        "module": word_scramble,
-        "description": "Unscramble words across multiple difficulty levels",
-        "stats": {"rounds": 0, "wins": 0, "losses": 0},
-        "fields": [
-            ("Rounds", "rounds"),
-            ("Wins", "wins"),
-            ("Losses", "losses"),
-        ],
-    },
-    "5": {
-        "name": "Connect Four",
-        "module": connect_four,
-        "description": "Connect four pieces before your opponent",
-        "stats": {"played": 0, "wins": 0, "losses": 0, "draws": 0},
-        "fields": [
-            ("Played", "played"),
-            ("Wins", "wins"),
-            ("Losses", "losses"),
-            ("Draws", "draws"),
-        ],
-    },
-    "6": {
-        "name": "Snake",
-        "module": snake,
-        "description": "Classic terminal Snake with score-based play",
-        "stats": {"games": 0, "best_score": 0, "total_score": 0},
-        "fields": [
-            ("Games", "games"),
-            ("Best Score", "best_score"),
-            ("Total Score", "total_score"),
-        ],
-    },
+"""Python Games Hub V2 foundation shell.
+
+Sprint 1 establishes the hub architecture. Game modules are migrated in later
+sprints; the registry deliberately uses stable game identifiers rather than
+menu positions.
+"""
+
+from dataclasses import dataclass
+
+from engine.game import SessionConfig
+from engine.utils import choose_from_menu, display_title
+
+
+@dataclass(frozen=True)
+class GameDefinition:
+    name: str
+    description: str
+    module: str
+    capabilities: frozenset[str]
+    modes: frozenset[str]
+    difficulties: tuple[str, ...]
+
+
+GAME_REGISTRY = {
+    "tic_tac_toe": GameDefinition(
+        "Tic-Tac-Toe",
+        "Classic 3x3 strategy game",
+        "tic_tac_toe",
+        frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
+        frozenset({"competitive", "practice"}),
+        ("easy", "medium", "hard", "custom"),
+    ),
+    "hangman": GameDefinition(
+        "Hangman",
+        "Guess the hidden word before you run out of attempts",
+        "hangman",
+        frozenset({"hint", "practice", "custom_difficulty"}),
+        frozenset({"competitive", "practice"}),
+        ("easy", "medium", "hard", "custom"),
+    ),
+    "rock_paper_scissors": GameDefinition(
+        "Rock Paper Scissors",
+        "Classic RPS with optional Lizard & Spock",
+        "rock_paper_scissors",
+        frozenset({"history", "practice"}),
+        frozenset({"competitive", "practice"}),
+        ("easy", "medium", "hard"),
+    ),
+    "word_scramble": GameDefinition(
+        "Word Scramble",
+        "Unscramble words across multiple difficulty levels",
+        "word_scramble",
+        frozenset({"hint", "practice"}),
+        frozenset({"competitive", "practice"}),
+        ("easy", "medium", "hard"),
+    ),
+    "connect_four": GameDefinition(
+        "Connect Four",
+        "Connect four pieces before your opponent",
+        "connect_four",
+        frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
+        frozenset({"competitive", "practice"}),
+        ("easy", "medium", "hard", "custom"),
+    ),
+    "snake": GameDefinition(
+        "Snake",
+        "Classic terminal Snake with score-based play",
+        "snake",
+        frozenset({"run_history", "practice"}),
+        frozenset({"competitive", "practice"}),
+        ("easy", "medium", "hard"),
+    ),
 }
-SCOREBOARD_FILE = Path(__file__).with_name("scoreboard.json")
-class Scoreboard:
-    """Track and persist game results for the Games Hub."""
-    def __init__(self, file_path=SCOREBOARD_FILE):
-        self.file_path = Path(file_path)
-        self.stats = {
-            config["name"]: config["stats"].copy()
-            for config in GAME_CONFIG.values()
-        }
-        self.load()
-    def load(self):
-        """Load saved statistics, keeping defaults for missing or invalid data."""
-        if not self.file_path.exists():
-            return
-        try:
-            with self.file_path.open("r", encoding="utf-8") as file:
-                saved_stats = json.load(file)
-        except (OSError, json.JSONDecodeError):
-            return
-        if not isinstance(saved_stats, dict):
-            return
-        for game_name, stats in self.stats.items():
-            saved_game_stats = saved_stats.get(game_name)
-            if not isinstance(saved_game_stats, dict):
-                continue
-            for key in stats:
-                value = saved_game_stats.get(key)
-                if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
-                    stats[key] = value
-    def save(self):
-        """Save current statistics to the local scoreboard file."""
-        self.file_path.parent.mkdir(parents=True, exist_ok=True)
-        temp_file = self.file_path.with_suffix(".tmp")
-        try:
-            with temp_file.open("w", encoding="utf-8") as file:
-                json.dump(self.stats, file, indent=4)
-                file.write("\n")
-            temp_file.replace(self.file_path)
-        except OSError:
-            if temp_file.exists():
-                temp_file.unlink()
-            raise
-    def record(self, game, result, score=None):
-        """Record one completed game, round, match, or Snake score."""
-        game_name = next(
-            config["name"]
-            for config in GAME_CONFIG.values()
-            if config["module"].__name__ == game or config["name"] == game
+
+
+def build_session_config(
+    game: str,
+    difficulty: str,
+    mode: str = "competitive",
+    custom_settings: dict | None = None,
+    options: dict | None = None,
+) -> SessionConfig:
+    """Build and validate one hub-owned session configuration."""
+    if game not in GAME_REGISTRY:
+        raise ValueError(f"Unknown game: {game}")
+
+    definition = GAME_REGISTRY[game]
+
+    if difficulty == "custom" and "custom_difficulty" not in definition.capabilities:
+        raise ValueError(f"{game} does not support custom difficulty")
+
+    if difficulty not in definition.difficulties:
+        raise ValueError(f"Unsupported difficulty for {game}: {difficulty}")
+
+    if mode not in definition.modes:
+        raise ValueError(f"Unsupported mode for {game}: {mode}")
+
+    return SessionConfig(
+        game=game,
+        difficulty=difficulty,
+        mode=mode,
+        custom_settings=custom_settings or {},
+        options=options or {},
+    )
+
+
+def display_game_menu() -> None:
+    display_title("PYTHON GAMES HUB")
+    print("1. Play")
+    print("2. Quick Play")
+    print("3. Profile & Statistics")
+    print("4. Settings")
+    print("5. Exit")
+
+
+def choose_game(*, input_func=input) -> str:
+    """Let the hub select a game using its stable registry identifier."""
+    print("\nChoose Game")
+
+    entries = list(GAME_REGISTRY.items())
+
+    for number, (_, definition) in enumerate(entries, 1):
+        print(f"{number}. {definition.name}")
+
+    choice = choose_from_menu(
+        "Choose: ",
+        [str(number) for number in range(1, len(entries) + 1)],
+        input_func=input_func,
+    )
+
+    return entries[int(choice) - 1][0]
+
+
+def choose_session_config(game: str, *, input_func=input) -> SessionConfig:
+    """Choose a named difficulty for a hub-owned session configuration."""
+    if game not in GAME_REGISTRY:
+        raise ValueError(f"Unknown game: {game}")
+
+    definition = GAME_REGISTRY[game]
+
+    print(f"\nConfigure Session: {definition.name}")
+    print("1. Easy")
+    print("2. Medium")
+    print("3. Hard")
+
+    if "custom_difficulty" in definition.capabilities:
+        print("4. Advanced")
+        valid_choices = {"1", "2", "3", "4"}
+    else:
+        valid_choices = {"1", "2", "3"}
+
+    difficulty_choice = choose_from_menu(
+        "Choose difficulty: ",
+        valid_choices,
+        input_func=input_func,
+    )
+
+    if difficulty_choice == "4":
+        raise NotImplementedError(
+            "Advanced custom configuration is implemented in Sprint 3."
         )
-        stats = self.stats[game_name]
-        if game == "snake":
-            score = 0 if score is None else score
-            stats["games"] += 1
-            stats["total_score"] += score
-            stats["best_score"] = max(stats["best_score"], score)
-            self.save()
-            return
-        if game == "word_scramble":
-            stats["rounds"] += 1
-        else:
-            stats["played"] += 1
-        if result == "win":
-            stats["wins"] += 1
-        elif result == "loss":
-            stats["losses"] += 1
-        elif result == "draw" and "draws" in stats:
-            stats["draws"] += 1
-        self.save()
-    def display(self):
-        """Display all saved game statistics."""
-        print("\n" + "=" * 64)
-        print("                     UNIFIED SCOREBOARD")
-        print("=" * 64)
-        for config in GAME_CONFIG.values():
-            game_name = config["name"]
-            stats = self.stats[game_name]
-            print(f"\n  {game_name}")
-            print(f"  {config['description']}")
-            print("  " + "-" * 58)
-            for label, key in config["fields"]:
-                print(f"    {label:<16} {stats[key]}")
-        print("\n" + "=" * 64)
-def display_title():
-    print("\n" + "=" * 64)
-    print("                     PYTHON GAMES HUB")
-    print("=" * 64)
-    print("                 Six classic Python games")
-    print("              Choose a game to start playing")
-    print("=" * 64)
-def display_game_menu():
-    """Display the main hub menu."""
-    print("\n" + "-" * 64)
-    print("                         GAMES")
-    print("-" * 64)
-    for choice, config in GAME_CONFIG.items():
-        print(f"  {choice}. {config['name']:<24} - {config['description']}")
-    scoreboard_choice = str(len(GAME_CONFIG) + 1)
-    exit_choice = str(len(GAME_CONFIG) + 2)
-    print(f"\n  {scoreboard_choice}. Unified Scoreboard")
-    print(f"  {exit_choice}. Exit")
-    print("-" * 64)
-    return scoreboard_choice, exit_choice
-def main():
-    scoreboard = Scoreboard()
-    scoreboard_choice = str(len(GAME_CONFIG) + 1)
-    exit_choice = str(len(GAME_CONFIG) + 2)
+
+    difficulty = {
+        "1": "easy",
+        "2": "medium",
+        "3": "hard",
+    }[difficulty_choice]
+
+    return build_session_config(game, difficulty)
+
+
+def main() -> None:
+    """Run the Sprint 1 V2 foundation shell."""
     while True:
-        display_title()
-        menu_scoreboard_choice, menu_exit_choice = display_game_menu()
-        choice = input("\nChoose an option: ").strip()
-        if choice in GAME_CONFIG:
-            GAME_CONFIG[choice]["module"].main(scoreboard.record)
-        elif choice == menu_scoreboard_choice:
-            scoreboard.display()
-            input("\nPress Enter to return to the hub...")
-        elif choice == menu_exit_choice:
-            print("\nThanks for playing!")
-            break
+        display_game_menu()
+
+        choice = choose_from_menu(
+            "Choose an option: ",
+            {"1", "2", "3", "4", "5"},
+        )
+
+        if choice == "1":
+            game = choose_game()
+
+            try:
+                choose_session_config(game)
+            except NotImplementedError as exc:
+                print(f"\n{exc}")
+
+            print("\nGame migration is scheduled for Sprint 2.")
+            input("Press Enter to return to the hub...")
+
+        elif choice == "2":
+            print("\nQuick Play will be connected after game migration.")
+            input("Press Enter to return to the hub...")
+
+        elif choice == "3":
+            print("\nProfile & Statistics foundation is ready.")
+            input("Press Enter to return to the hub...")
+
+        elif choice == "4":
+            print("\nSettings foundation is ready.")
+            input("Press Enter to return to the hub...")
+
         else:
-            print(f"\nInvalid choice! Please choose 1-{exit_choice}.")
+            print("\nV2 foundation session ended.")
+            break
+
+
 if __name__ == "__main__":
     main()

@@ -98,6 +98,7 @@ def find_best_move(board, personality="Balanced"):
         preferred = [position for position in (0, 2, 6, 8, 4) if position in best_moves]
     else:
         preferred = best_moves
+    preferred = preferred or best_moves
     return random.choice(preferred)
 def choose_personality():
     personalities = {

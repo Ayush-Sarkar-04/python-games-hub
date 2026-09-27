@@ -1,95 +1,78 @@
-# Python Games Hub
+# Python Games Hub V2
 
-Classic Python games rebuilt with smarter gameplay, multiple modes, and a unified persistent scoreboard.
+A terminal-based Python games hub rebuilt around a shared session and game architecture while preserving the working V1 gameplay implementations.
+
+## V2 Sprint 1
+
+Sprint 1 establishes the foundation for the V2 architecture. The six V1 games are carried into `games/` with the previously approved V1 fixes preserved; gameplay migration begins in later sprints.
+
+### Foundation
+
+- Hub-owned `SessionConfig`
+- Shared `GameState`
+- Shared `GameResult`
+- Static game registry
+- Shared utility functions
+- JSON persistence boundary
+- Profile, statistics, achievement, and settings foundations
+- Flat test suite under `tests/`
 
 ## Games
 
-| Game | Description |
-|---|---|
-| Tic-Tac-Toe | Classic 3x3 strategy game with Easy, Medium, and unbeatable Hard AI |
-| Hangman | Word-guessing game with categories, difficulty levels, hints, and streak tracking |
-| Rock Paper Scissors | Single game or Best-of mode with optional Lizard & Spock and computer personality |
-| Word Scramble | Difficulty-based word scrambling with an online word source and local fallback |
-| Connect Four | Player vs Computer or Player vs Player with Easy, Medium, and Hard AI |
-| Snake | Real-time terminal Snake with difficulty levels, power-ups, pause, and optional wrap-around |
-
-## Key Features
-
-- Six independently runnable games
-- Player vs Computer and/or Player vs Player modes where supported
-- Difficulty levels on supported games
-- Smarter computer opponents, including minimax-based Hard modes
-- Persistent unified scoreboard
-- Game-specific statistics
-- Session streak tracking on supported games
-- Replay support
-- Input validation
-- Network word sources with local fallbacks where applicable
-- Standard-library implementation
-
-## Unified Scoreboard
-
-The Games Hub maintains a persistent `scoreboard.json` file beside `main.py`.
-
-The scoreboard tracks game-appropriate statistics:
-
-- **Tic-Tac-Toe:** played, wins, losses, draws
-- **Hangman:** played, wins, losses
-- **Rock Paper Scissors:** games/matches, wins, losses, draws
-- **Word Scramble:** rounds, wins, losses
-- **Connect Four:** played, wins, losses, draws
-- **Snake:** games, best score, total score
-
-`scoreboard.json` is local runtime data and should not be committed to Git.
-
-## Controls
-
-### Menu-Based Games
-
-Tic-Tac-Toe, Hangman, Rock Paper Scissors, Word Scramble, and Connect Four use keyboard input through the terminal.
-
-Each game validates player input and provides prompts for invalid selections.
-
-### Snake
-
-- **W / A / S / D** — Move
-- **Arrow Keys** — Move
-- **P** — Pause / Resume
-- **Q** — Quit
-
-## External Word Sources
-
-Two games can use online word sources:
-
-- **Hangman** loads category data from a remote JSON source and includes a local fallback.
-- **Word Scramble** uses the Random Word API and includes difficulty-specific fallback words.
-
-The games remain playable when the external word source is unavailable.
+- **Tic-Tac-Toe** — PvC/PvP, three difficulty levels, computer personalities, minimax on Hard, and win-streak tracking.
+- **Hangman** — category-based word selection, difficulty, hints, ASCII stages, and streak tracking.
+- **Rock Paper Scissors** — standard RPS with optional Lizard-Spock, match modes, personalities, history bias, and streak tracking.
+- **Word Scramble** — API-backed word selection with fallback words, difficulty, hints, attempts, and streak tracking.
+- **Connect Four** — PvC/PvP, difficulty levels, gravity, win detection, and Hard-mode minimax.
+- **Snake** — real-time terminal gameplay with multiple speeds, keyboard controls, pause/quit, power-ups, wrap-around, and scoreboard tracking.
 
 ## Project Structure
 
 ```text
-python-games-hub/
+python-games-hub-v2/
 ├── main.py
-├── tic_tac_toe.py
-├── hangman.py
-├── rock_paper_scissors.py
-├── word_scramble.py
-├── connect_four.py
-├── snake.py
+├── engine/
+│   ├── __init__.py
+│   ├── game.py
+│   ├── state.py
+│   ├── result.py
+│   ├── utils.py
+│   ├── persistence.py
+│   ├── profiles.py
+│   ├── statistics.py
+│   ├── achievements.py
+│   └── settings.py
+├── games/
+│   ├── __init__.py
+│   ├── tic_tac_toe.py
+│   ├── connect_four.py
+│   ├── hangman.py
+│   ├── rock_paper_scissors.py
+│   ├── word_scramble.py
+│   └── snake.py
+├── tests/
+│   ├── test_game.py
+│   ├── test_result.py
+│   ├── test_state.py
+│   ├── test_utils.py
+│   ├── test_persistence.py
+│   ├── test_systems.py
+│   ├── test_registry.py
+│   └── test_flow.py
 ├── README.md
+├── gameplan.md
 └── .gitignore
 ```
 
-`scoreboard.json` is created automatically at runtime and is intentionally ignored by Git.
-
 ## Requirements
 
-The games use Python's standard library. No third-party Python package is required for the current game hub.
+The games use Python's standard library and have no runtime third-party dependencies.
 
 Python 3.10+ is recommended.
 
-## Running the Hub
+For development and testing, install `pytest`.
+
+## Running
 
 From the project directory:
 
@@ -97,27 +80,14 @@ From the project directory:
 python main.py
 ```
 
-Each game can also be run independently:
+The individual game modules remain independently runnable during the migration process.
 
-```bash
-python tic_tac_toe.py
-python hangman.py
-python rock_paper_scissors.py
-python word_scramble.py
-python connect_four.py
-python snake.py
-```
+## V2 Architecture
 
-## Design Approach
+`main.py` owns the hub and session configuration. `engine/` contains the shared architecture and supporting systems. `games/` contains the individual game implementations. `tests/` contains the complete Sprint 1 test suite in one flat directory.
 
-The project keeps each game in its own module while `main.py` acts as the hub and scoreboard owner.
+The V2 design intentionally avoids a plugin framework, dynamic game discovery, GUI/web layers, databases, and other unnecessary infrastructure. The goal is to make the existing games easier to extend without turning the project into a generic game engine.
 
-Games report completed results through an optional callback. This allows every game to remain independently runnable without creating circular imports between the game modules and the hub.
+## Scope
 
-The project focuses on clean terminal gameplay, practical Python structure, and progressively smarter implementations rather than unnecessary frameworks or abstractions.
-
-## Current Scope
-
-The project is a standalone collection of terminal games designed as a Python development project and portfolio piece.
-
-Future changes can focus on polish, testing, documentation, and usability rather than continuously adding gameplay complexity.
+Sprint 1 is foundation-only. The existing gameplay behavior is preserved. Tic-Tac-Toe migration starts Sprint 2, followed by Connect Four as the architectural stress test, then the remaining games and Snake in later sprints.
