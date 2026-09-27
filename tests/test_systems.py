@@ -120,3 +120,151 @@ def test_achievement_evaluator_does_not_repeat_unlocked_achievement():
         mode="competitive",
     )
     assert BOARD_GAME_ACHIEVEMENT_EVALUATOR.evaluate(result, {"first_victory"}) == []
+
+
+def test_commit3_statistics_aggregate_competitive_results_only():
+    from engine.result import GameResult
+    from engine.statistics import update_statistics
+
+    statistics = {}
+    rps_result = GameResult(
+        game="rock_paper_scissors",
+        outcome="win",
+        difficulty="hard",
+        mode="competitive",
+        score=3,
+        metadata={
+            "configuration": {
+                "personality": "unpredictable",
+                "variant": "extended",
+                "match_type": "match",
+            },
+            "win_streak": 2,
+            "best_streak": 4,
+        },
+    )
+    practice_result = GameResult(
+        game="hangman",
+        outcome="win",
+        difficulty="easy",
+        mode="practice",
+        metadata={"mistakes": 0, "win_streak": 0, "best_streak": 0},
+    )
+
+    statistics = update_statistics(statistics, rps_result)
+    statistics = update_statistics(statistics, practice_result)
+
+    assert statistics["rock_paper_scissors"] == {
+        "matches": 1,
+        "wins": 1,
+        "win_streak": 2,
+        "best_streak": 4,
+        "results_by_personality": {
+            "unpredictable": {"wins": 1},
+        },
+        "lizard_spock_matches": 1,
+    }
+    assert "hangman" not in statistics
+
+
+def test_commit3_statistics_track_hangman_and_word_scramble_records():
+    from engine.result import GameResult
+    from engine.statistics import update_statistics
+
+    statistics = {}
+    statistics = update_statistics(
+        statistics,
+        GameResult(
+            game="hangman",
+            outcome="win",
+            difficulty="medium",
+            mode="competitive",
+            metadata={"mistakes": 2, "win_streak": 1, "best_streak": 1},
+        ),
+    )
+    statistics = update_statistics(
+        statistics,
+        GameResult(
+            game="hangman",
+            outcome="win",
+            difficulty="hard",
+            mode="competitive",
+            metadata={"mistakes": 0, "win_streak": 2, "best_streak": 2},
+        ),
+    )
+    statistics = update_statistics(
+        statistics,
+        GameResult(
+            game="word_scramble",
+            outcome="win",
+            difficulty="easy",
+            mode="competitive",
+            score=3,
+            metadata={"attempts": 1, "win_streak": 1, "best_streak": 1},
+        ),
+    )
+    statistics = update_statistics(
+        statistics,
+        GameResult(
+            game="word_scramble",
+            outcome="win",
+            difficulty="hard",
+            mode="competitive",
+            score=1,
+            metadata={"attempts": 3, "win_streak": 2, "best_streak": 2},
+        ),
+    )
+
+    assert statistics["hangman"]["games"] == 2
+    assert statistics["hangman"]["wins"] == 2
+    assert statistics["hangman"]["fewest_mistakes"] == 0
+    assert statistics["word_scramble"]["rounds"] == 2
+    assert statistics["word_scramble"]["wins"] == 2
+    assert statistics["word_scramble"]["fewest_attempts"] == 1
+
+
+def test_commit3_achievement_triggers_from_real_result_shapes():
+    from engine.achievements import NON_REAL_TIME_ACHIEVEMENT_EVALUATOR
+    from engine.result import GameResult
+
+    hangman = GameResult(
+        game="hangman",
+        outcome="win",
+        difficulty="easy",
+        mode="competitive",
+        metadata={"mistakes": 0},
+    )
+    rps = GameResult(
+        game="rock_paper_scissors",
+        outcome="win",
+        difficulty="hard",
+        mode="competitive",
+        metadata={"configuration": {"variant": "extended"}},
+    )
+    scramble = GameResult(
+        game="word_scramble",
+        outcome="win",
+        difficulty="easy",
+        mode="competitive",
+        score=3,
+        metadata={"attempts": 1},
+    )
+
+    assert NON_REAL_TIME_ACHIEVEMENT_EVALUATOR.evaluate(hangman) == ["perfect_hangman"]
+    assert NON_REAL_TIME_ACHIEVEMENT_EVALUATOR.evaluate(rps) == ["rps_lizard_spock_win"]
+    assert NON_REAL_TIME_ACHIEVEMENT_EVALUATOR.evaluate(scramble) == ["word_scramble_first_try"]
+
+
+def test_commit3_achievements_exclude_practice_results():
+    from engine.achievements import NON_REAL_TIME_ACHIEVEMENT_EVALUATOR
+    from engine.result import GameResult
+
+    result = GameResult(
+        game="word_scramble",
+        outcome="win",
+        difficulty="easy",
+        mode="practice",
+        metadata={"attempts": 1},
+    )
+
+    assert NON_REAL_TIME_ACHIEVEMENT_EVALUATOR.evaluate(result) == []

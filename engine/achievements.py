@@ -80,6 +80,58 @@ BOARD_GAME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
 )
 
 
+NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS = (
+    AchievementDefinition(
+        id="perfect_hangman",
+        name="Perfect Hangman",
+        description="Win a competitive Hangman game with zero mistakes.",
+    ),
+    AchievementDefinition(
+        id="rps_lizard_spock_win",
+        name="Lizard & Spock Victory",
+        description="Win a competitive Rock Paper Scissors match using the Lizard & Spock variant.",
+    ),
+    AchievementDefinition(
+        id="word_scramble_first_try",
+        name="Perfect Scramble",
+        description="Solve a competitive Word Scramble round on the first attempt.",
+    ),
+)
+
+NON_REAL_TIME_ACHIEVEMENT_RULES: dict[str, AchievementRule] = {
+    "perfect_hangman": lambda result: (
+        result.game == "hangman"
+        and result.mode == "competitive"
+        and result.outcome == "win"
+        and result.metadata.get("mistakes") == 0
+    ),
+    "rps_lizard_spock_win": lambda result: (
+        result.game == "rock_paper_scissors"
+        and result.mode == "competitive"
+        and result.outcome == "win"
+        and result.metadata.get("configuration", {}).get("variant") == "extended"
+    ),
+    "word_scramble_first_try": lambda result: (
+        result.game == "word_scramble"
+        and result.mode == "competitive"
+        and result.outcome == "win"
+        and result.metadata.get("attempts") == 1
+    ),
+}
+
+NON_REAL_TIME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
+    definitions=NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS,
+    rules=NON_REAL_TIME_ACHIEVEMENT_RULES,
+)
+
+ALL_ACHIEVEMENT_DEFINITIONS = BOARD_GAME_ACHIEVEMENT_DEFINITIONS + NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS
+ALL_ACHIEVEMENT_RULES = {**BOARD_GAME_ACHIEVEMENT_RULES, **NON_REAL_TIME_ACHIEVEMENT_RULES}
+ALL_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
+    definitions=ALL_ACHIEVEMENT_DEFINITIONS,
+    rules=ALL_ACHIEVEMENT_RULES,
+)
+
+
 DEFAULT_ACHIEVEMENTS: dict[str, dict[str, Any]] = {}
 
 

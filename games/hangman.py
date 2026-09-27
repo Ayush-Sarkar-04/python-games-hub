@@ -93,14 +93,21 @@ class HangmanGame:
             raise ValueError(f"Unsupported Hangman difficulty: {config.difficulty}")
         difficulty = DIFFICULTIES.get(config.difficulty)
         attempts = difficulty["attempts"] if difficulty else config.custom_settings.get("attempts", 0)
-        if config.difficulty == "custom" and not 3 <= attempts <= 10:
-            raise ValueError("Hangman custom attempts must be between 3 and 10")
+        if config.difficulty == "custom":
+            if not isinstance(attempts, int) or isinstance(attempts, bool):
+                raise ValueError("Hangman custom attempts must be an integer")
+            if not 3 <= attempts <= 10:
+                raise ValueError("Hangman custom attempts must be between 3 and 10")
         category = config.options.get("category") if config.options else None
         if category not in self.words:
             raise ValueError("Hangman requires a valid category in SessionConfig.options")
         limits = difficulty or {"min_length": 1, "max_length": 999}
         words = [w for w in self.words[category]["words"] if limits["min_length"] <= len(w) <= limits["max_length"] and w.isalpha()]
-        word = random.choice(words or [w for w in self.words[category]["words"] if w.isalpha()])
+        if not words:
+            words = [w for w in self.words[category]["words"] if w.isalpha()]
+        if not words:
+            raise ValueError("Selected Hangman category contains no valid words")
+        word = random.choice(words)
         return GameState(
             game="hangman",
             data={
@@ -177,17 +184,20 @@ class HangmanGame:
         print("YOU WON!" if outcome == "win" else "GAME OVER!")
         print("=" * 40)
         print("The word was:", data["word"].upper())
+        mistakes = data["max_attempts"] - data["attempts"]
+        score = max(0, data["max_attempts"] - mistakes) if outcome == "win" else 0
         return GameResult(
             game="hangman",
             outcome=outcome,
             difficulty=config.difficulty,
             mode=config.mode,
+            score=score,
             moves=state.moves,
             metadata={
                 "configuration": {"category": data["category"]},
                 "word_length": len(data["word"]),
                 "hint_used": data["hint_used"],
-                "mistakes": data["max_attempts"] - data["attempts"],
+                "mistakes": mistakes,
                 "win_streak": self.win_streak,
                 "best_streak": self.best_streak,
             },

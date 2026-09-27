@@ -40,6 +40,8 @@ def get_word(difficulty):
     return random.choice(FALLBACK_WORDS[difficulty])
 def scramble_word(word):
     letters = list(word)
+    if len(set(letters)) <= 1:
+        return word
     while True:
         random.shuffle(letters)
         scrambled = "".join(letters)

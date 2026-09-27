@@ -124,11 +124,13 @@ class RockPaperScissorsGame:
         print("MATCH RESULT" if data["match_type"] == "match" else "GAME RESULT")
         print("=" * 42)
         print(f"You: {data['player_score']} | Computer: {data['computer_score']}")
+        score = {"win": 3, "draw": 1, "loss": 0}[outcome]
         return GameResult(
             game="rock_paper_scissors",
             outcome=outcome,
             difficulty=config.difficulty,
             mode=config.mode,
+            score=score,
             moves=state.moves,
             metadata={
                 "configuration": {

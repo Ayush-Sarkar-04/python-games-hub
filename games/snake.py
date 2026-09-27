@@ -35,7 +35,7 @@ def create_food(snake):
         for column in range(COLUMNS)
         if (row, column) not in snake
     ]
-    return random.choice(available)
+    return random.choice(available) if available else None
 def display_board(snake, food, score, powerup=None, powerup_type=None):
     head, body = snake[0], set(snake[1:])
     print("+" + "---" * COLUMNS + "+")
@@ -157,6 +157,8 @@ class SnakeGame:
                 if head == data["food"]:
                     data["score"] += FOOD_SCORE
                     data["food"] = create_food(data["snake"])
+                    if data["food"] is None:
+                        return self._finish(state, config, "game_over")
                     data["speed"] = max(MIN_SPEED, data["speed"] - SPEED_INCREMENT)
                     if random.random() < POWERUP_CHANCE:
                         data["powerup"] = create_food(data["snake"] + [data["food"]])

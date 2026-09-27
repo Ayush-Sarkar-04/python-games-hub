@@ -25,6 +25,7 @@ from games.rock_paper_scissors import (
 from games.snake import (
     DIFFICULTIES as SNAKE_DIFFICULTIES,
     SnakeGame,
+    create_food,
     get_direction,
     move_snake,
 )
@@ -278,6 +279,45 @@ def test_hangman_setup_requires_hub_category():
         game.setup(config)
 
 
+def test_hangman_empty_category_raises_clear_error():
+    game = HangmanGame({"animals": {"name": "Animals", "words": []}})
+    config = SessionConfig(
+        game="hangman",
+        difficulty="easy",
+        mode="practice",
+        options={"category": "animals"},
+    )
+    with pytest.raises(ValueError, match="contains no valid words"):
+        game.setup(config)
+
+
+def test_hangman_custom_attempts_validation():
+    game = HangmanGame({"animals": {"name": "Animals", "words": ["cat"]}})
+    for attempts in ("8", True, False, 2, 11):
+        with pytest.raises(ValueError):
+            game.setup(
+                SessionConfig(
+                    game="hangman",
+                    difficulty="custom",
+                    custom_settings={"attempts": attempts},
+                    options={"category": "animals"},
+                )
+            )
+
+
+def test_hangman_custom_attempts_setup():
+    game = HangmanGame({"animals": {"name": "Animals", "words": ["cat"]}})
+    config = SessionConfig(
+        game="hangman",
+        difficulty="custom",
+        mode="practice",
+        custom_settings={"attempts": 8},
+        options={"category": "animals"},
+    )
+    state = game.setup(config)
+    assert state.data["attempts"] == 8
+
+
 def test_hangman_play_records_guesses(monkeypatch):
     game = HangmanGame({"animals": {"name": "Animals", "words": ["cat"]}})
     config = SessionConfig(game="hangman", difficulty="easy", mode="practice", options={"category": "animals"})
@@ -331,6 +371,10 @@ def test_word_scramble_fallback_words_match_difficulty():
 def test_word_scramble_changes_word_order(monkeypatch):
     monkeypatch.setattr("random.shuffle", lambda letters: letters.reverse())
     assert scramble_word("table") == "elbat"
+
+
+def test_word_scramble_handles_repeated_letter_word():
+    assert scramble_word("aaaa") == "aaaa"
 def test_word_scramble_hint_schedule():
     assert HINT_SCHEDULE["easy"] == (1, 1)
     assert HINT_SCHEDULE["medium"] == (0, 1)
@@ -359,6 +403,11 @@ def test_word_scramble_play_scores_first_attempt(monkeypatch):
     assert result.score == 3
     assert state.moves == 1
     assert state.move_history == [{"guess": "table", "attempt": 1}]
+def test_snake_full_board_has_no_food():
+    full_board = [(row, column) for row in range(20) for column in range(30)]
+    assert create_food(full_board) is None
+
+
 def test_snake_setup_and_difficulty():
     game = SnakeGame()
     config = SessionConfig(game="snake", difficulty="hard", mode="practice", options={"wrap": True})
@@ -387,3 +436,33 @@ def test_snake_collision_rules():
     state = SnakeGame().setup(config)
     assert state.data["wrap"] is False
     assert config.difficulty in SNAKE_DIFFICULTIES
+
+def test_rock_paper_scissors_result_score(monkeypatch):
+    game = RockPaperScissorsGame()
+    config = SessionConfig(
+        game="rock_paper_scissors",
+        difficulty="easy",
+        mode="practice",
+        options={"variant": "standard", "match_type": "single"},
+    )
+    state = game.setup(config)
+    monkeypatch.setattr("builtins.input", lambda _: "1")
+    monkeypatch.setattr(
+        "games.rock_paper_scissors.choose_computer_move",
+        lambda history, moves, personality: "scissors",
+    )
+    assert game.play(state, config).score == 3
+
+
+def test_hangman_result_score_rewards_fewer_mistakes(monkeypatch):
+    game = HangmanGame({"animals": {"name": "Animals", "words": ["cat"]}})
+    config = SessionConfig(
+        game="hangman",
+        difficulty="easy",
+        mode="practice",
+        options={"category": "animals"},
+    )
+    state = game.setup(config)
+    answers = iter(["c", "a", "t"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    assert game.play(state, config).score == 7
