@@ -1,11 +1,22 @@
 import random
+from copy import deepcopy
+from time import sleep
+from typing import Callable
+from engine.game import SessionConfig
+from engine.result import GameResult
+from engine.state import GameState
 EASY = "1"
 MEDIUM = "2"
 HARD = "3"
+DIFFICULTY_MAP = {
+    "easy": EASY,
+    "medium": MEDIUM,
+    "hard": HARD,
+}
 WINNING_COMBINATIONS = [
     (0, 1, 2), (3, 4, 5), (6, 7, 8),
     (0, 3, 6), (1, 4, 7), (2, 5, 8),
-    (0, 4, 8), (2, 4, 6)
+    (0, 4, 8), (2, 4, 6),
 ]
 def display_title():
     print("\n" + "=" * 42)
@@ -93,9 +104,15 @@ def find_best_move(board, personality="Balanced"):
         elif score == best_score:
             best_moves.append(position)
     if personality == "Aggressive":
-        preferred = [position for position in (4, 0, 2, 6, 8) if position in best_moves]
+        preferred = [
+            position for position in (4, 0, 2, 6, 8)
+            if position in best_moves
+        ]
     elif personality == "Defensive":
-        preferred = [position for position in (0, 2, 6, 8, 4) if position in best_moves]
+        preferred = [
+            position for position in (0, 2, 6, 8, 4)
+            if position in best_moves
+        ]
     else:
         preferred = best_moves
     preferred = preferred or best_moves
@@ -135,7 +152,6 @@ def computer_move(board, difficulty, personality="Balanced"):
             if blocking_move is not None:
                 return blocking_move
         return random.choice(empty_positions)
-    # Hard remains unbeatable; personality only changes tie-breaking preference.
     return find_best_move(board, personality)
 def display_result(message):
     print("\n" + "=" * 42)
@@ -161,10 +177,7 @@ def play_game(mode, difficulty=None, personality="Balanced"):
                 return "loss"
             display_result(f"Player {player} wins!")
             return "win"
-        if player == "X":
-            player = "O"
-        else:
-            player = "X"
+        player = "O" if player == "X" else "X"
     display_board(board)
     display_result("It's a draw!")
     return "draw"
@@ -186,7 +199,164 @@ def play_again():
         if choice in ("y", "n"):
             return choice == "y"
         print("Invalid input! Enter y or n.")
+def _hint_move(board, difficulty, personality):
+    simulated_board = deepcopy(board)
+    if difficulty == EASY:
+        return random.choice(get_empty_positions(simulated_board))
+    return computer_move(simulated_board, difficulty, personality)
+def _display_replay(move_history, delay=0.0):
+    board = [" "] * 9
+    for move in move_history:
+        board[move["position"]] = move["player"]
+        display_board(board)
+        if delay > 0:
+            sleep(delay)
+def _get_v2_player_move(state, player, difficulty, personality, hint_used):
+    while True:
+        choice = input(
+            f"Player {player}, choose a position (1-9)"
+            f"{' or H for hint' if not hint_used else ''}: "
+        ).strip().lower()
+        if choice == "h" and not hint_used:
+            hint = _hint_move(state.data["board"], difficulty, personality)
+            print(f"Hint: position {hint + 1}.")
+            return None, True
+        try:
+            position = int(choice) - 1
+        except ValueError:
+            print("Invalid input! Please enter a number from 1 to 9.")
+            continue
+        if position < 0 or position > 8:
+            print("Invalid position! Please choose a number from 1 to 9.")
+            continue
+        if state.data["board"][position] != " ":
+            print("Position already taken! Choose another position.")
+            continue
+        return position, hint_used
+class TicTacToeGame:
+    name = "Tic-Tac-Toe"
+    description = "Classic 3x3 strategy game"
+    def __init__(self):
+        self.win_streak = 0
+        self.best_streak = 0
+    def setup(self, config: SessionConfig) -> GameState:
+        if config.game != "tic_tac_toe":
+            raise ValueError("TicTacToeGame requires game='tic_tac_toe'")
+        if config.difficulty not in DIFFICULTY_MAP:
+            raise ValueError(
+                f"Unsupported Tic-Tac-Toe difficulty: {config.difficulty}"
+            )
+        player_mode = config.options.get("player_mode", "computer")
+        if player_mode not in {"computer", "player"}:
+            raise ValueError("player_mode must be 'computer' or 'player'")
+        personality = config.options.get("personality", "Balanced")
+        if personality not in {"Balanced", "Aggressive", "Defensive"}:
+            raise ValueError("Unsupported Tic-Tac-Toe personality")
+        return GameState(
+            game="tic_tac_toe",
+            status="ready",
+            data={
+                "board": [" "] * 9,
+                "current_player": "X",
+                "player_mode": player_mode,
+                "personality": personality,
+                "hint_used": False,
+            },
+            metadata={"difficulty": config.difficulty},
+        )
+    def play(self, state: GameState, config: SessionConfig) -> GameResult:
+        difficulty = DIFFICULTY_MAP[config.difficulty]
+        board = state.data["board"]
+        player_mode = state.data["player_mode"]
+        personality = state.data["personality"]
+        state.set_status("playing")
+        display_title()
+        if player_mode == "computer":
+            print(f"You are X. Computer is O. Personality: {personality}")
+        if config.mode == "practice":
+            print("Practice Mode: this session does not count toward competitive streaks.")
+        for _ in range(9):
+            display_board(board)
+            player = state.data["current_player"]
+            if player_mode == "computer" and player == "O":
+                position = computer_move(board, difficulty, personality)
+                print(f"Computer chooses position {position + 1}.")
+            else:
+                while True:
+                    position, hint_used = _get_v2_player_move(
+                        state,
+                        player,
+                        difficulty,
+                        personality,
+                        state.data["hint_used"],
+                    )
+                    if position is not None:
+                        state.data["hint_used"] = hint_used
+                        break
+                    state.data["hint_used"] = hint_used
+            board[position] = player
+            state.record_move({"player": player, "position": position})
+            if check_winner(board):
+                display_board(board)
+                if player_mode == "computer" and player == "O":
+                    outcome = "loss"
+                    message = "Computer wins!"
+                else:
+                    outcome = "win"
+                    message = f"Player {player} wins!"
+                display_result(message)
+                state.set_status(outcome)
+                if config.is_competitive and player_mode == "computer":
+                    if outcome == "win":
+                        self.win_streak += 1
+                        self.best_streak = max(self.best_streak, self.win_streak)
+                    else:
+                        self.win_streak = 0
+                result = GameResult(
+                    game="tic_tac_toe",
+                    outcome=outcome,
+                    difficulty=config.difficulty,
+                    mode=config.mode,
+                    moves=state.moves,
+                    metadata={
+                        "player_mode": player_mode,
+                        "personality": personality,
+                        "hint_used": state.data["hint_used"],
+                        "win_streak": self.win_streak,
+                        "best_streak": self.best_streak,
+                    },
+                )
+                return self._finish_with_optional_replay(result, state)
+            state.data["current_player"] = "O" if player == "X" else "X"
+        display_board(board)
+        display_result("It's a draw!")
+        state.set_status("draw")
+        if config.is_competitive and player_mode == "computer":
+            self.win_streak = 0
+        result = GameResult(
+            game="tic_tac_toe",
+            outcome="draw",
+            difficulty=config.difficulty,
+            mode=config.mode,
+            moves=state.moves,
+            metadata={
+                "player_mode": player_mode,
+                "personality": personality,
+                "hint_used": state.data["hint_used"],
+                "win_streak": self.win_streak,
+                "best_streak": self.best_streak,
+            },
+        )
+        return self._finish_with_optional_replay(result, state)
+    def _finish_with_optional_replay(self, result, state):
+        """Offer replay without changing the recorded result or state."""
+        choice = input("\nReplay this game? (y/n): ").strip().lower()
+        if choice == "y":
+            print("\nREPLAY")
+            _display_replay(state.move_history)
+        return result
 def main(record_result=None):
+    """Legacy standalone entry point."""
     win_streak = 0
     best_streak = 0
     while True:
