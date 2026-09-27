@@ -2,6 +2,7 @@ from dataclasses import dataclass, replace
 from engine.game import SessionConfig
 from engine.utils import choose_from_menu, display_title
 from games.tic_tac_toe import TicTacToeGame
+from games.connect_four import ConnectFourGame
 @dataclass(frozen=True)
 class GameDefinition:
     name: str
@@ -103,7 +104,6 @@ def choose_game(*, input_func=input) -> str:
     )
     return entries[int(choice) - 1][0]
 def choose_session_config(game: str, *, input_func=input) -> SessionConfig:
-    """Choose a named difficulty for a hub-owned session configuration."""
     if game not in GAME_REGISTRY:
         raise ValueError(f"Unknown game: {game}")
     definition = GAME_REGISTRY[game]
@@ -132,7 +132,6 @@ def choose_session_config(game: str, *, input_func=input) -> SessionConfig:
     }[difficulty_choice]
     return build_session_config(game, difficulty)
 def choose_session_mode(*, input_func=input) -> str:
-    """Choose the hub-owned competitive or practice session mode."""
     print("\nSession Mode")
     print("1. Competitive")
     print("2. Practice")
@@ -143,7 +142,6 @@ def choose_session_mode(*, input_func=input) -> str:
     )
     return "competitive" if choice == "1" else "practice"
 def main() -> None:
-    """Run the Sprint 1 V2 foundation shell."""
     while True:
         display_game_menu()
         choice = choose_from_menu(
@@ -158,12 +156,15 @@ def main() -> None:
                 print(f"\n{exc}")
                 input("Press Enter to return to the hub...")
                 continue
-            if game == "tic_tac_toe":
+            if game in {"tic_tac_toe", "connect_four"}:
                 mode = choose_session_mode()
                 config = replace(config, mode=mode)
-                tic_tac_toe = TicTacToeGame()
-                state = tic_tac_toe.setup(config)
-                tic_tac_toe.play(state, config)
+                if game == "tic_tac_toe":
+                    game_instance = TicTacToeGame()
+                else:
+                    game_instance = ConnectFourGame()
+                state = game_instance.setup(config)
+                game_instance.play(state, config)
                 input("\nPress Enter to return to the hub...")
             else:
                 print("\nThis game is scheduled for a later migration sprint.")

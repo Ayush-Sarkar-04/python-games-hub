@@ -1,5 +1,10 @@
 import math
 import random
+from copy import deepcopy
+from time import sleep
+from engine.game import SessionConfig
+from engine.result import GameResult
+from engine.state import GameState
 ROWS = 6
 COLUMNS = 7
 EMPTY = " "
@@ -16,6 +21,11 @@ DIFFICULTIES = {
     EASY: "Easy",
     MEDIUM: "Medium",
     HARD: "Hard",
+}
+DIFFICULTY_MAP = {
+    "easy": EASY,
+    "medium": MEDIUM,
+    "hard": HARD,
 }
 def display_title():
     print("\n" + "=" * 50)
@@ -109,17 +119,11 @@ def evaluate_board(board, piece):
     score += center_column.count(piece) * 4
     for row in range(ROWS):
         for column in range(COLUMNS - 3):
-            window = [
-                board[row][column + offset]
-                for offset in range(4)
-            ]
+            window = [board[row][column + offset] for offset in range(4)]
             score += score_window(window, piece)
     for row in range(ROWS - 3):
         for column in range(COLUMNS):
-            window = [
-                board[row + offset][column]
-                for offset in range(4)
-            ]
+            window = [board[row + offset][column] for offset in range(4)]
             score += score_window(window, piece)
     for row in range(ROWS - 3):
         for column in range(COLUMNS - 3):
@@ -151,16 +155,13 @@ def minimax(board, depth, maximizing):
         return None, -1000000 - depth
     if not valid_columns or depth == 0:
         return None, evaluate_board(board, COMPUTER)
-
     if maximizing:
         best_score = -math.inf
         best_columns = []
-
         for column in valid_columns:
             test_board = [row[:] for row in board]
             simulate_move(test_board, column, COMPUTER)
             _, score = minimax(test_board, depth - 1, False)
-
             if score > best_score:
                 best_score = score
                 best_columns = [column]
@@ -231,6 +232,174 @@ def choose_first_player(mode):
                 return PLAYER if choice == "1" else COMPUTER
             return PLAYER if choice == "1" else "O"
         print("Invalid choice! Please choose 1 or 2.")
+def _hint_move(board, difficulty, player):
+    simulated_board = deepcopy(board)
+    if player == COMPUTER:
+        return computer_move(simulated_board, difficulty)
+    winning_move = find_immediate_move(simulated_board, PLAYER)
+    if winning_move is not None:
+        return winning_move
+    opponent_threat = find_immediate_move(simulated_board, COMPUTER)
+    if opponent_threat is not None:
+        return opponent_threat
+    center = COLUMNS // 2
+    if center in get_valid_columns(simulated_board):
+        return center
+    return random.choice(get_valid_columns(simulated_board))
+def _display_replay(move_history, delay=0.0):
+    board = create_board()
+    for move in move_history:
+        simulate_move(board, move["column"], move["player"])
+        display_board(board)
+        if delay > 0:
+            sleep(delay)
+def _get_v2_player_move(state, player, difficulty, hint_used):
+    while True:
+        choice = input(
+            f"Player {player}, choose a column (1-{COLUMNS})"
+            f"{' or H for hint' if not hint_used else ''}: "
+        ).strip().lower()
+        if choice == "h" and not hint_used:
+            hint = _hint_move(state.data["board"], difficulty, player)
+            print(f"Hint: column {hint + 1}.")
+            return None, True
+        try:
+            column = int(choice) - 1
+        except ValueError:
+            print(f"Invalid input! Please enter a number from 1 to {COLUMNS}.")
+            continue
+        if column not in range(COLUMNS):
+            print(f"Please choose a column from 1 to {COLUMNS}.")
+            continue
+        if column not in get_valid_columns(state.data["board"]):
+            print("That column is full! Choose another column.")
+            continue
+        return column, hint_used
+class ConnectFourGame:
+    name = "Connect Four"
+    description = "Connect four pieces before your opponent"
+    def __init__(self):
+        self.win_streak = 0
+        self.best_streak = 0
+    def setup(self, config: SessionConfig) -> GameState:
+        if config.game != "connect_four":
+            raise ValueError("ConnectFourGame requires game='connect_four'")
+        if config.difficulty not in DIFFICULTY_MAP:
+            raise ValueError(
+                f"Unsupported Connect Four difficulty: {config.difficulty}"
+            )
+        player_mode = config.options.get("player_mode", "computer")
+        if player_mode not in {"computer", "player"}:
+            raise ValueError("player_mode must be 'computer' or 'player'")
+        first_player = config.options.get("first_player", PLAYER)
+        valid_first_players = {PLAYER, COMPUTER} if player_mode == "computer" else {PLAYER, "O"}
+        if first_player not in valid_first_players:
+            raise ValueError("Unsupported first_player for Connect Four mode")
+        return GameState(
+            game="connect_four",
+            status="ready",
+            data={
+                "board": create_board(),
+                "current_player": first_player,
+                "player_mode": player_mode,
+                "hint_used": False,
+            },
+            metadata={"difficulty": config.difficulty},
+        )
+    def play(self, state: GameState, config: SessionConfig) -> GameResult:
+        difficulty = DIFFICULTY_MAP[config.difficulty]
+        board = state.data["board"]
+        player_mode = state.data["player_mode"]
+        state.set_status("playing")
+        display_title()
+        if player_mode == "computer":
+            print("You are X. Computer is O.")
+        if config.mode == "practice":
+            print("Practice Mode: this session does not count toward competitive streaks.")
+        for turn_number in range(1, ROWS * COLUMNS + 1):
+            display_board(board)
+            player = state.data["current_player"]
+            if player_mode == "computer" and player == COMPUTER:
+                column = computer_move(board, difficulty)
+                print(f"Computer chooses column {column + 1}.")
+            else:
+                while True:
+                    column, hint_used = _get_v2_player_move(
+                        state,
+                        player,
+                        difficulty,
+                        state.data["hint_used"],
+                    )
+                    if column is not None:
+                        state.data["hint_used"] = hint_used
+                        break
+                    state.data["hint_used"] = hint_used
+            simulate_move(board, column, player)
+            state.record_move({"player": player, "column": column})
+            if check_winner(board, player):
+                display_board(board)
+                if player_mode == "computer" and player == COMPUTER:
+                    outcome = "loss"
+                    message = f"Computer wins in {turn_number} turns!"
+                else:
+                    outcome = "win"
+                    message = f"Player {player} wins in {turn_number} turns!"
+                display_result(message)
+                state.set_status(outcome)
+                self._update_streak(config, player_mode, outcome)
+                result = GameResult(
+                    game="connect_four",
+                    outcome=outcome,
+                    difficulty=config.difficulty,
+                    mode=config.mode,
+                    moves=state.moves,
+                    metadata={
+                        "player_mode": player_mode,
+                        "hint_used": state.data["hint_used"],
+                        "win_streak": self.win_streak,
+                        "best_streak": self.best_streak,
+                    },
+                )
+                return self._finish_with_optional_replay(result, state)
+            if board_full(board):
+                display_board(board)
+                display_result(f"It's a draw after {turn_number} turns!")
+                state.set_status("draw")
+                self._update_streak(config, player_mode, "draw")
+                result = GameResult(
+                    game="connect_four",
+                    outcome="draw",
+                    difficulty=config.difficulty,
+                    mode=config.mode,
+                    moves=state.moves,
+                    metadata={
+                        "player_mode": player_mode,
+                        "hint_used": state.data["hint_used"],
+                        "win_streak": self.win_streak,
+                        "best_streak": self.best_streak,
+                    },
+                )
+                return self._finish_with_optional_replay(result, state)
+            state.data["current_player"] = (
+                COMPUTER if player == PLAYER else PLAYER
+                if player_mode == "computer"
+                else "O" if player == PLAYER else PLAYER
+            )
+        raise RuntimeError("Connect Four session ended unexpectedly")
+    def _update_streak(self, config, player_mode, outcome):
+        if not config.is_competitive or player_mode != "computer":
+            return
+        if outcome == "win":
+            self.win_streak += 1
+            self.best_streak = max(self.best_streak, self.win_streak)
+        else:
+            self.win_streak = 0
+    def _finish_with_optional_replay(self, result, state):
+        choice = input("\nReplay this game? (y/n): ").strip().lower()
+        if choice == "y":
+            print("\nREPLAY")
+            _display_replay(state.move_history)
+        return result
 def play_game(mode, difficulty=None, first_player=PLAYER):
     board = create_board()
     current_player = first_player
@@ -248,13 +417,9 @@ def play_game(mode, difficulty=None, first_player=PLAYER):
         if check_winner(board, current_player):
             display_board(board)
             if mode == "computer" and current_player == COMPUTER:
-                display_result(
-                    f"Computer wins in {turn_number} turns!"
-                )
+                display_result(f"Computer wins in {turn_number} turns!")
                 return "loss"
-            display_result(
-                f"Player {current_player} wins in {turn_number} turns!"
-            )
+            display_result(f"Player {current_player} wins in {turn_number} turns!")
             return "win"
         if board_full(board):
             display_board(board)
@@ -282,19 +447,15 @@ def main(record_result=None):
                 print("\nYou are X. Computer is O.")
             else:
                 print("\nComputer is X. You are O.")
-
             result = play_game("computer", difficulty, first_player)
             if record_result:
                 record_result("connect_four", result)
         elif choice == "2":
             first_player = choose_first_player("player")
             print(f"\nPlayer {first_player} goes first.")
-
             result = play_game("player", first_player=first_player)
-
             if record_result:
                 record_result("connect_four", result)
-
         elif choice == "3":
             print("\nThanks for playing Connect Four!")
             break
