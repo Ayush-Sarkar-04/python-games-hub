@@ -20,7 +20,10 @@ class SettingsStore:
         if not isinstance(data, dict):
             return dict(DEFAULT_SETTINGS)
         settings = dict(DEFAULT_SETTINGS)
-        settings.update(data)
+        if isinstance(data.get("banner_style"), str) and data["banner_style"].strip():
+            settings["banner_style"] = data["banner_style"]
+        if isinstance(data.get("auto_suggest_difficulty"), bool):
+            settings["auto_suggest_difficulty"] = data["auto_suggest_difficulty"]
         return settings
 
     def save(self, settings: dict[str, Any]) -> None:

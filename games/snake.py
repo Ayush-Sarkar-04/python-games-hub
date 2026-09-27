@@ -193,7 +193,7 @@ class SnakeGame:
             mode=config.mode,
             score=score,
             moves=state.moves,
-            metadata={"wrap": state.data["wrap"]},
+            metadata={"configuration": {"wrap": state.data["wrap"]}},
         )
 def main():
     game = SnakeGame()

@@ -1,3 +1,4 @@
+import pytest
 from engine.achievements import AchievementStore
 from engine.profiles import Profile, ProfileStore
 from engine.settings import SettingsStore
@@ -30,3 +31,92 @@ def test_settings_store_merges_defaults(tmp_path):
     settings = store.load()
     assert settings["banner_style"] == "classic"
     assert settings["auto_suggest_difficulty"] is True
+
+
+def test_achievement_definition_and_evaluator_consume_game_result():
+    from engine.achievements import AchievementDefinition, AchievementEvaluator
+    from engine.result import GameResult
+
+    definition = AchievementDefinition(
+        id="first_win",
+        name="First Win",
+        description="Win a competitive game.",
+    )
+    evaluator = AchievementEvaluator(
+        definitions=(definition,),
+        rules={"first_win": lambda result: result.mode == "competitive" and result.outcome == "win"},
+    )
+    result = GameResult(
+        game="tic_tac_toe",
+        outcome="win",
+        difficulty="easy",
+        mode="competitive",
+    )
+
+    assert evaluator.evaluate(result) == ["first_win"]
+
+
+def test_achievement_definition_requires_schema_fields():
+    from engine.achievements import AchievementDefinition
+
+    with pytest.raises(ValueError):
+        AchievementDefinition(id="", name="First Win", description="Win a game.")
+
+
+def test_settings_store_rejects_invalid_field_types(tmp_path):
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save({"banner_style": 12345, "auto_suggest_difficulty": "yes"})
+    settings = store.load()
+    assert settings == {
+        "banner_style": "default",
+        "auto_suggest_difficulty": True,
+    }
+
+
+def test_tic_tac_toe_result_reaches_achievement_evaluator(monkeypatch):
+    from engine.achievements import BOARD_GAME_ACHIEVEMENT_EVALUATOR
+    from engine.game import SessionConfig
+    from games.tic_tac_toe import TicTacToeGame
+
+    game = TicTacToeGame()
+    config = SessionConfig(
+        game="tic_tac_toe",
+        difficulty="easy",
+        mode="practice",
+        options={"player_mode": "player", "personality": "Balanced"},
+    )
+    state = game.setup(config)
+    answers = iter(["1", "2", "4", "5", "7", "n"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    result = game.play(state, config)
+    assert BOARD_GAME_ACHIEVEMENT_EVALUATOR.evaluate(result) == []
+
+
+def test_connect_four_achievement_evaluator_accepts_competitive_result():
+    from engine.achievements import BOARD_GAME_ACHIEVEMENT_EVALUATOR
+    from engine.result import GameResult
+
+    result = GameResult(
+        game="connect_four",
+        outcome="win",
+        difficulty="custom",
+        mode="competitive",
+        metadata={"win_streak": 10, "configuration": {"custom_settings": {"minimax_depth": 6}}},
+    )
+    assert set(BOARD_GAME_ACHIEVEMENT_EVALUATOR.evaluate(result)) == {
+        "first_victory",
+        "connect_four_10_win_streak",
+    }
+
+
+def test_achievement_evaluator_does_not_repeat_unlocked_achievement():
+    from engine.achievements import BOARD_GAME_ACHIEVEMENT_EVALUATOR
+    from engine.result import GameResult
+
+    result = GameResult(
+        game="tic_tac_toe",
+        outcome="win",
+        difficulty="hard",
+        mode="competitive",
+    )
+    assert BOARD_GAME_ACHIEVEMENT_EVALUATOR.evaluate(result, {"first_victory"}) == []

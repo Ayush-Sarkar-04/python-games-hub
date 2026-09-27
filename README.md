@@ -11,7 +11,7 @@ A terminal-based Python games hub with six independently runnable games and a sh
 - **Word Scramble** — API-backed word selection with local fallbacks, difficulty levels, hints, attempts, and streak tracking.
 - **Snake** — Real-time terminal gameplay with multiple speeds, keyboard controls, pause/quit, power-ups, wrap-around, and score tracking.
 
-All six games are connected to the hub and remain independently runnable.
+All six games are connected to the hub. Each game remains independently runnable, while the hub owns session difficulty, mode, and game-specific configuration.
 
 ## Architecture
 
@@ -54,7 +54,7 @@ python-games-hub/
 
 ### `main.py`
 
-Owns the hub menu, static game registry, session configuration, and game launching.
+Owns the hub menu, game registry, session configuration, and launching of games that are connected to the hub.
 
 ### `engine/`
 

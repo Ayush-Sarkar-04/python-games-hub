@@ -15,14 +15,16 @@ class GameDefinition:
     capabilities: frozenset[str]
     modes: frozenset[str]
     difficulties: tuple[str, ...]
+    configuration_options: frozenset[str] = frozenset()
 GAME_REGISTRY = {
     "tic_tac_toe": GameDefinition(
         "Tic-Tac-Toe",
         "Classic 3x3 strategy game",
         "games.tic_tac_toe",
-        frozenset({"replay", "history", "hint", "practice"}),
+        frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
         frozenset({"competitive", "practice"}),
         ("easy", "medium", "hard"),
+        frozenset({"player_mode", "personality"}),
     ),
     "hangman": GameDefinition(
         "Hangman",
@@ -31,6 +33,7 @@ GAME_REGISTRY = {
         frozenset({"hint", "practice"}),
         frozenset({"competitive", "practice"}),
         ("easy", "medium", "hard"),
+        frozenset({"category"}),
     ),
     "rock_paper_scissors": GameDefinition(
         "Rock Paper Scissors",
@@ -39,6 +42,7 @@ GAME_REGISTRY = {
         frozenset({"history", "practice"}),
         frozenset({"competitive", "practice"}),
         ("easy", "medium", "hard"),
+        frozenset({"variant", "match_type", "rounds"}),
     ),
     "word_scramble": GameDefinition(
         "Word Scramble",
@@ -47,14 +51,16 @@ GAME_REGISTRY = {
         frozenset({"hint", "practice"}),
         frozenset({"competitive", "practice"}),
         ("easy", "medium", "hard"),
+        frozenset(),
     ),
     "connect_four": GameDefinition(
         "Connect Four",
         "Connect four pieces before your opponent",
         "games.connect_four",
-        frozenset({"replay", "history", "hint", "practice"}),
+        frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
         frozenset({"competitive", "practice"}),
         ("easy", "medium", "hard"),
+        frozenset({"player_mode", "first_player"}),
     ),
     "snake": GameDefinition(
         "Snake",
@@ -63,6 +69,7 @@ GAME_REGISTRY = {
         frozenset({"run_history", "practice"}),
         frozenset({"competitive", "practice"}),
         ("easy", "medium", "hard"),
+        frozenset({"wrap"}),
     ),
 }
 
@@ -87,9 +94,10 @@ def build_session_config(
         raise ValueError(f"Unknown game: {game}")
     definition = GAME_REGISTRY[game]
     if difficulty not in definition.difficulties:
-        if difficulty == "custom":
-            raise ValueError(f"Unsupported custom difficulty for {game}")
-        raise ValueError(f"Unsupported difficulty for {game}: {difficulty}")
+        if difficulty == "custom" and "custom_difficulty" in definition.capabilities:
+            pass
+        else:
+            raise ValueError(f"Unsupported custom difficulty for {game}" if difficulty == "custom" else f"Unsupported difficulty for {game}: {difficulty}")
     if mode not in definition.modes:
         raise ValueError(f"Unsupported mode for {game}: {mode}")
     return SessionConfig(
@@ -136,10 +144,10 @@ def choose_session_config(game: str, *, input_func=input) -> SessionConfig:
     return build_session_config(game, choices[difficulty_choice])
 
 
-def launch_game(game: str, config: SessionConfig) -> None:
+def launch_game(game: str, config: SessionConfig):
     game_instance = GAME_CLASSES[game]()
     state = game_instance.setup(config)
-    game_instance.play(state, config)
+    return game_instance.play(state, config)
 def choose_session_mode(*, input_func=input) -> str:
     print("\nSession Mode")
     print("1. Competitive")
@@ -153,43 +161,122 @@ def choose_session_mode(*, input_func=input) -> str:
 
 
 def choose_game_options(game: str, *, input_func=input) -> dict:
-    if game != "rock_paper_scissors":
-        return {}
+    options = GAME_REGISTRY[game].configuration_options
 
-    print("\nVariant")
-    print("1. Standard")
-    print("2. Lizard & Spock")
-    variant_choice = choose_from_menu(
-        "Choose variant: ",
-        {"1", "2"},
-        input_func=input_func,
-    )
+    if "player_mode" in options:
+        print("\nPlayer Mode")
+        print("1. Player vs Computer")
+        print("2. Player vs Player")
+        choice = choose_from_menu(
+            "Choose mode: ",
+            {"1", "2"},
+            input_func=input_func,
+        )
+        player_mode = "computer" if choice == "1" else "player"
 
-    print("\nMatch Type")
-    print("1. Single Game")
-    print("2. Best of...")
-    match_choice = choose_from_menu(
-        "Choose: ",
-        {"1", "2"},
-        input_func=input_func,
-    )
+        if "personality" in options and player_mode == "computer":
+            print("\nAI Personality")
+            print("1. Balanced")
+            print("2. Aggressive")
+            print("3. Defensive")
+            personality_choice = choose_from_menu(
+                "Choose personality: ",
+                {"1", "2", "3"},
+                input_func=input_func,
+            )
+            personality = {
+                "1": "Balanced",
+                "2": "Aggressive",
+                "3": "Defensive",
+            }[personality_choice]
+        else:
+            personality = "Balanced"
 
-    rounds = 1
-    if match_choice == "2":
-        while True:
-            try:
-                rounds = int(input_func("Number of rounds (2-10): ").strip())
-                if 2 <= rounds <= 10:
-                    break
-            except ValueError:
-                pass
-            print("Please choose a number from 2 to 10.")
+        if "first_player" in options:
+            print("\nWho goes first?")
+            if player_mode == "computer":
+                print("1. Player")
+                print("2. Computer")
+            else:
+                print("1. Player X")
+                print("2. Player O")
+            first_choice = choose_from_menu(
+                "Choose: ",
+                {"1", "2"},
+                input_func=input_func,
+            )
+            first_player = (
+                "X" if first_choice == "1" else "O"
+            )
+            return {
+                "player_mode": player_mode,
+                "first_player": first_player,
+            }
 
-    return {
-        "variant": "standard" if variant_choice == "1" else "extended",
-        "match_type": "single" if match_choice == "1" else "match",
-        "rounds": rounds,
-    }
+        return {
+            "player_mode": player_mode,
+            "personality": personality,
+        }
+
+    if "category" in options:
+        game_instance = GAME_CLASSES[game]()
+        categories = list(game_instance.words)
+        print("\nCategory")
+        for number, category in enumerate(categories, 1):
+            print(f"{number}. {game_instance.words[category]['name']}")
+        choice = choose_from_menu(
+            "Choose category: ",
+            {str(number) for number in range(1, len(categories) + 1)},
+            input_func=input_func,
+        )
+        return {"category": categories[int(choice) - 1]}
+
+    if "variant" in options:
+        print("\nVariant")
+        print("1. Standard")
+        print("2. Lizard & Spock")
+        variant_choice = choose_from_menu(
+            "Choose variant: ",
+            {"1", "2"},
+            input_func=input_func,
+        )
+
+        print("\nMatch Type")
+        print("1. Single Game")
+        print("2. Best of...")
+        match_choice = choose_from_menu(
+            "Choose: ",
+            {"1", "2"},
+            input_func=input_func,
+        )
+        rounds = 1
+        if match_choice == "2":
+            while True:
+                try:
+                    rounds = int(input_func("Number of rounds (2-10): ").strip())
+                    if 2 <= rounds <= 10:
+                        break
+                except ValueError:
+                    pass
+                print("Please choose a number from 2 to 10.")
+        return {
+            "variant": "standard" if variant_choice == "1" else "extended",
+            "match_type": "single" if match_choice == "1" else "match",
+            "rounds": rounds,
+        }
+
+    if "wrap" in options:
+        print("\nWrap-around")
+        print("1. Disabled")
+        print("2. Enabled")
+        choice = choose_from_menu(
+            "Choose: ",
+            {"1", "2"},
+            input_func=input_func,
+        )
+        return {"wrap": choice == "2"}
+
+    return {}
 
 
 def main() -> None:

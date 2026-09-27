@@ -9,8 +9,19 @@ def test_registry_uses_stable_game_identifiers():
 
 def test_registry_declares_capabilities():
     assert "replay" in GAME_REGISTRY["tic_tac_toe"].capabilities
+    assert "custom_difficulty" in GAME_REGISTRY["tic_tac_toe"].capabilities
+    assert "custom_difficulty" in GAME_REGISTRY["connect_four"].capabilities
     assert "run_history" in GAME_REGISTRY["snake"].capabilities
     assert "custom_difficulty" not in GAME_REGISTRY["snake"].capabilities
+
+
+def test_custom_difficulty_supported_for_board_games():
+    assert build_session_config(
+        "tic_tac_toe", "custom", custom_settings={"minimax_depth": 5}
+    ).difficulty == "custom"
+    assert build_session_config(
+        "connect_four", "custom", custom_settings={"minimax_depth": 5}
+    ).difficulty == "custom"
 
 
 def test_custom_difficulty_rejected_when_capability_is_absent():

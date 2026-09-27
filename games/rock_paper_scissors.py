@@ -131,10 +131,12 @@ class RockPaperScissorsGame:
             mode=config.mode,
             moves=state.moves,
             metadata={
-                "personality": data["personality"],
-                "variant": "extended" if data["extended"] else "standard",
-                "match_type": data["match_type"],
-                "rounds": data["rounds"],
+                "configuration": {
+                    "personality": data["personality"],
+                    "variant": "extended" if data["extended"] else "standard",
+                    "match_type": data["match_type"],
+                    "rounds": data["rounds"],
+                },
                 "player_score": data["player_score"],
                 "computer_score": data["computer_score"],
                 "win_streak": self.win_streak,

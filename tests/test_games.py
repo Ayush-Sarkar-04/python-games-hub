@@ -4,6 +4,8 @@ from engine.result import GameResult
 from engine.state import GameState
 from games.connect_four import (
     COLUMNS,
+    CUSTOM_MINIMAX_DEPTH_MAX as CONNECT_FOUR_CUSTOM_MAX,
+    CUSTOM_MINIMAX_DEPTH_MIN as CONNECT_FOUR_CUSTOM_MIN,
     HARD as CONNECT_FOUR_HARD,
     ConnectFourGame,
     _display_replay as replay_connect_four,
@@ -27,6 +29,8 @@ from games.snake import (
     move_snake,
 )
 from games.tic_tac_toe import (
+    CUSTOM_MINIMAX_DEPTH_MAX as TIC_TAC_TOE_CUSTOM_MAX,
+    CUSTOM_MINIMAX_DEPTH_MIN as TIC_TAC_TOE_CUSTOM_MIN,
     HARD as TIC_TAC_TOE_HARD,
     TicTacToeGame,
     _display_replay as replay_tic_tac_toe,
@@ -55,6 +59,46 @@ def test_tic_tac_toe_setup_and_difficulty():
 def test_tic_tac_toe_difficulty_mapping(difficulty, expected):
     from games.tic_tac_toe import DIFFICULTY_MAP
     assert DIFFICULTY_MAP[difficulty] == expected
+def test_tic_tac_toe_custom_difficulty_setup_and_metadata():
+    config = SessionConfig(
+        game="tic_tac_toe",
+        difficulty="custom",
+        custom_settings={"minimax_depth": 5},
+        options={"player_mode": "computer", "personality": "Aggressive"},
+    )
+    state = TicTacToeGame().setup(config)
+    assert state.data["custom_settings"] == {"minimax_depth": 5}
+
+
+def test_tic_tac_toe_custom_difficulty_bounds():
+    for depth in (TIC_TAC_TOE_CUSTOM_MIN - 1, TIC_TAC_TOE_CUSTOM_MAX + 1, "5", True):
+        with pytest.raises(ValueError):
+            TicTacToeGame().setup(
+                SessionConfig(
+                    game="tic_tac_toe",
+                    difficulty="custom",
+                    custom_settings={"minimax_depth": depth},
+                )
+            )
+
+
+def test_tic_tac_toe_custom_result_records_settings(monkeypatch):
+    game = TicTacToeGame()
+    config = SessionConfig(
+        game="tic_tac_toe",
+        difficulty="custom",
+        mode="practice",
+        custom_settings={"minimax_depth": 5},
+        options={"player_mode": "player", "personality": "Balanced"},
+    )
+    state = game.setup(config)
+    answers = iter(["1", "2", "4", "5", "7", "n"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    result = game.play(state, config)
+    assert result.difficulty == "custom"
+    assert result.metadata["configuration"]["custom_settings"] == {"minimax_depth": 5}
+
+
 def test_tic_tac_toe_hard_ai_takes_winning_move():
     board = ["O", "O", " ", "X", "X", " ", " ", " ", " "]
     original = board[:]
@@ -95,6 +139,10 @@ def test_tic_tac_toe_play_records_committed_moves(monkeypatch):
         {"player": "O", "position": 4},
         {"player": "X", "position": 6},
     ]
+    assert result.metadata["configuration"] == {
+        "player_mode": "player",
+        "personality": "Balanced",
+    }
 def test_tic_tac_toe_practice_does_not_change_streak(monkeypatch):
     game = TicTacToeGame()
     config = SessionConfig(
@@ -116,6 +164,43 @@ def test_connect_four_setup_and_gravity():
     assert isinstance(state, GameState)
     assert state.data["board"] == create_board()
     assert state.data["current_player"] == "X"
+def test_connect_four_custom_difficulty_setup_and_bounds():
+    config = SessionConfig(
+        game="connect_four",
+        difficulty="custom",
+        custom_settings={"minimax_depth": 5},
+    )
+    state = ConnectFourGame().setup(config)
+    assert state.data["custom_settings"] == {"minimax_depth": 5}
+
+    for depth in (CONNECT_FOUR_CUSTOM_MIN - 1, CONNECT_FOUR_CUSTOM_MAX + 1, "5", True):
+        with pytest.raises(ValueError):
+            ConnectFourGame().setup(
+                SessionConfig(
+                    game="connect_four",
+                    difficulty="custom",
+                    custom_settings={"minimax_depth": depth},
+                )
+            )
+
+
+def test_connect_four_custom_result_records_settings(monkeypatch):
+    game = ConnectFourGame()
+    config = SessionConfig(
+        game="connect_four",
+        difficulty="custom",
+        mode="practice",
+        custom_settings={"minimax_depth": 3},
+        options={"player_mode": "player", "first_player": "X"},
+    )
+    state = game.setup(config)
+    answers = iter(["1", "2", "1", "2", "1", "2", "1", "n"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    result = game.play(state, config)
+    assert result.difficulty == "custom"
+    assert result.metadata["configuration"]["custom_settings"] == {"minimax_depth": 3}
+
+
 def test_connect_four_hard_ai_finds_immediate_win():
     board = create_board()
     for offset in range(3):
@@ -152,6 +237,10 @@ def test_connect_four_play_records_committed_moves(monkeypatch):
     assert result.outcome == "win"
     assert result.moves == 7
     assert state.moves == 7
+    assert result.metadata["configuration"] == {
+        "player_mode": "player",
+        "first_player": "X",
+    }
 def test_connect_four_practice_does_not_change_streak(monkeypatch):
     game = ConnectFourGame()
     config = SessionConfig(
@@ -182,6 +271,13 @@ def test_hangman_word_helpers():
     assert display_word("apple", guessed) == "A P P _ _"
     assert not word_complete("apple", guessed)
     assert word_complete("apple", {"a", "p", "l", "e"})
+def test_hangman_setup_requires_hub_category():
+    game = HangmanGame({"animals": {"name": "Animals", "words": ["cat"]}})
+    config = SessionConfig(game="hangman", difficulty="easy", mode="practice")
+    with pytest.raises(ValueError, match="requires a valid category"):
+        game.setup(config)
+
+
 def test_hangman_play_records_guesses(monkeypatch):
     game = HangmanGame({"animals": {"name": "Animals", "words": ["cat"]}})
     config = SessionConfig(game="hangman", difficulty="easy", mode="practice", options={"category": "animals"})
@@ -227,6 +323,8 @@ def test_rock_paper_scissors_play_records_round(monkeypatch):
     assert result.outcome == "win"
     assert state.moves == 1
     assert state.move_history == [{"player": "rock", "computer": "scissors"}]
+    assert result.metadata["configuration"]["variant"] == "standard"
+    assert result.metadata["configuration"]["personality"] == "balanced"
 def test_word_scramble_fallback_words_match_difficulty():
     for difficulty, (_, minimum, maximum) in SCRAMBLE_DIFFICULTY.items():
         assert all(minimum <= len(word) <= maximum for word in FALLBACK_WORDS[difficulty])
@@ -237,6 +335,8 @@ def test_word_scramble_hint_schedule():
     assert HINT_SCHEDULE["easy"] == (1, 1)
     assert HINT_SCHEDULE["medium"] == (0, 1)
     assert HINT_SCHEDULE["hard"] == (0, 0)
+
+
 def test_word_scramble_setup(monkeypatch):
     monkeypatch.setattr("games.word_scramble.get_word", lambda difficulty: "table")
     game = WordScrambleGame()

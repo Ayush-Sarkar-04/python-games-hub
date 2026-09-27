@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 VALID_OUTCOMES = {"win", "loss", "draw", "quit", "game_over"}
+CONFIGURATION_KEYS = {"custom_settings", "personality", "variant"}
 
 
 @dataclass(frozen=True)
@@ -21,8 +22,8 @@ class GameResult:
     def __post_init__(self) -> None:
         if not self.game.strip():
             raise ValueError("game must not be empty")
-        if not self.outcome.strip():
-            raise ValueError("outcome must not be empty")
+        if self.outcome not in VALID_OUTCOMES:
+            raise ValueError(f"Unsupported outcome: {self.outcome}")
         if not self.difficulty.strip():
             raise ValueError("difficulty must not be empty")
         if not self.mode.strip():
@@ -37,11 +38,26 @@ class GameResult:
             raise TypeError("moves must be an integer or None")
         if not isinstance(self.metadata, dict):
             raise TypeError("metadata must be a dictionary")
+        configuration = self.metadata.get("configuration", {})
+        if not isinstance(configuration, dict):
+            raise TypeError("metadata['configuration'] must be a dictionary")
+        misplaced = CONFIGURATION_KEYS.intersection(self.metadata)
+        if misplaced:
+            raise ValueError(
+                "configuration fields must be nested under metadata['configuration']"
+            )
 
     def with_metadata(self, **updates: Any) -> "GameResult":
         """Return a copy with additional metadata."""
         metadata = dict(self.metadata)
-        metadata.update(updates)
+        configuration = dict(metadata.get("configuration", {}))
+        for key, value in updates.items():
+            if key in CONFIGURATION_KEYS:
+                configuration[key] = value
+            else:
+                metadata[key] = value
+        if configuration:
+            metadata["configuration"] = configuration
         return GameResult(
             game=self.game,
             outcome=self.outcome,

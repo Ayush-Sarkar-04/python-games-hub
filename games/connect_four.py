@@ -28,6 +28,9 @@ DIFFICULTY_MAP = {
     "medium": MEDIUM,
     "hard": HARD,
 }
+
+CUSTOM_MINIMAX_DEPTH_MIN = 1
+CUSTOM_MINIMAX_DEPTH_MAX = 6
 def display_title():
     print("\n" + "=" * 50)
     print("                 CONNECT FOUR")
@@ -164,7 +167,7 @@ def minimax(board, depth, maximizing):
         elif score == best_score:
             best_columns.append(column)
     return random.choice(best_columns), best_score
-def computer_move(board, difficulty):
+def computer_move(board, difficulty, custom_depth=None):
     valid_columns = get_valid_columns(board)
     if difficulty == EASY:
         return random.choice(valid_columns)
@@ -179,7 +182,8 @@ def computer_move(board, difficulty):
         if center in valid_columns and random.random() < 0.7:
             return center
         return random.choice(valid_columns)
-    best_column, _ = minimax(board, 4, True)
+    depth = custom_depth if difficulty == "custom" else 4
+    best_column, _ = minimax(board, depth, True)
     if best_column is not None:
         return best_column
     return random.choice(valid_columns)
@@ -216,10 +220,10 @@ def choose_first_player(mode):
                 return PLAYER if choice == "1" else COMPUTER
             return PLAYER if choice == "1" else "O"
         print("Invalid choice! Please choose 1 or 2.")
-def _hint_move(board, difficulty, player):
+def _hint_move(board, difficulty, player, custom_depth=None):
     simulated_board = deepcopy(board)
     if player == COMPUTER:
-        return computer_move(simulated_board, difficulty)
+        return computer_move(simulated_board, difficulty, custom_depth)
     winning_move = find_immediate_move(simulated_board, PLAYER)
     if winning_move is not None:
         return winning_move
@@ -237,14 +241,14 @@ def _display_replay(move_history, delay=0.0):
         display_board(board)
         if delay > 0:
             sleep(delay)
-def _get_player_move(state, player, difficulty, hint_used):
+def _get_player_move(state, player, difficulty, hint_used, custom_depth=None):
     while True:
         choice = input(
             f"Player {player}, choose a column (1-{COLUMNS})"
             f"{' or H for hint' if not hint_used else ''}: "
         ).strip().lower()
         if choice == "h" and not hint_used:
-            hint = _hint_move(state.data["board"], difficulty, player)
+            hint = _hint_move(state.data["board"], difficulty, player, custom_depth)
             print(f"Hint: column {hint + 1}.")
             return None, True
         try:
@@ -268,10 +272,23 @@ class ConnectFourGame:
     def setup(self, config: SessionConfig) -> GameState:
         if config.game != "connect_four":
             raise ValueError("ConnectFourGame requires game='connect_four'")
-        if config.difficulty not in DIFFICULTY_MAP:
+        if config.difficulty not in DIFFICULTY_MAP and config.difficulty != "custom":
             raise ValueError(
                 f"Unsupported Connect Four difficulty: {config.difficulty}"
             )
+
+        custom_settings = {}
+        if config.difficulty == "custom":
+            depth = config.custom_settings.get("minimax_depth")
+            if isinstance(depth, bool) or not isinstance(depth, int):
+                raise ValueError("Connect Four custom minimax_depth must be an integer")
+            if not CUSTOM_MINIMAX_DEPTH_MIN <= depth <= CUSTOM_MINIMAX_DEPTH_MAX:
+                raise ValueError(
+                    f"Connect Four custom minimax_depth must be between "
+                    f"{CUSTOM_MINIMAX_DEPTH_MIN} and {CUSTOM_MINIMAX_DEPTH_MAX}"
+                )
+            custom_settings["minimax_depth"] = depth
+
         player_mode = config.options.get("player_mode", "computer")
         if player_mode not in {"computer", "player"}:
             raise ValueError("player_mode must be 'computer' or 'player'")
@@ -287,19 +304,23 @@ class ConnectFourGame:
                 "current_player": first_player,
                 "player_mode": player_mode,
                 "hint_used": False,
+                "custom_settings": custom_settings,
             },
             metadata={"difficulty": config.difficulty},
         )
     def play(self, state: GameState, config: SessionConfig) -> GameResult:
-        difficulty = DIFFICULTY_MAP[config.difficulty]
+        difficulty = config.difficulty if config.difficulty == "custom" else DIFFICULTY_MAP[config.difficulty]
+        custom_depth = state.data["custom_settings"].get("minimax_depth")
         board = state.data["board"]
         player_mode = state.data["player_mode"]
         state.set_status("playing")
+
         display_title()
         if player_mode == "computer":
             print("You are X. Computer is O.")
         if config.mode == "practice":
             print("Practice Mode: this session does not count toward competitive streaks.")
+
         outcome = "draw"
         message = "It's a draw!"
         for turn_number in range(1, ROWS * COLUMNS + 1):
@@ -307,7 +328,7 @@ class ConnectFourGame:
             player = state.data["current_player"]
 
             if player_mode == "computer" and player == COMPUTER:
-                column = computer_move(board, difficulty)
+                column = computer_move(board, difficulty, custom_depth)
                 print(f"Computer chooses column {column + 1}.")
             else:
                 while True:
@@ -316,12 +337,15 @@ class ConnectFourGame:
                         player,
                         difficulty,
                         state.data["hint_used"],
+                        custom_depth,
                     )
                     state.data["hint_used"] = hint_used
                     if column is not None:
                         break
+
             simulate_move(board, column, player)
             state.record_move({"player": player, "column": column})
+
             if check_winner(board, player):
                 if player_mode == "computer" and player == COMPUTER:
                     outcome = "loss"
@@ -330,16 +354,27 @@ class ConnectFourGame:
                     outcome = "win"
                     message = f"Player {player} wins in {turn_number} turns!"
                 break
+
             if board_full(board):
                 break
+
             if player_mode == "computer":
                 state.data["current_player"] = COMPUTER if player == PLAYER else PLAYER
             else:
                 state.data["current_player"] = "O" if player == PLAYER else PLAYER
+
         display_board(board)
         display_result(message)
         state.set_status(outcome)
         self._update_streak(config, player_mode, outcome)
+
+        configuration = {
+            "player_mode": player_mode,
+            "first_player": config.options.get("first_player", PLAYER),
+        }
+        if custom_depth is not None:
+            configuration["custom_settings"] = {"minimax_depth": custom_depth}
+
         result = GameResult(
             game="connect_four",
             outcome=outcome,
@@ -347,13 +382,14 @@ class ConnectFourGame:
             mode=config.mode,
             moves=state.moves,
             metadata={
-                "player_mode": player_mode,
+                "configuration": configuration,
                 "hint_used": state.data["hint_used"],
                 "win_streak": self.win_streak,
                 "best_streak": self.best_streak,
             },
         )
         return self._finish_with_optional_replay(result, state)
+
     def _update_streak(self, config, player_mode, outcome):
         if not config.is_competitive or player_mode != "computer":
             return
@@ -363,21 +399,28 @@ class ConnectFourGame:
         else:
             self.win_streak = 0
     def _finish_with_optional_replay(self, result, state):
+        choice = input("\nReplay this game? (y/n): ").strip().lower()
+        if choice == "y":
+            print("\nREPLAY")
+            _display_replay(state.move_history)
         return result
 def main(record_result=None):
     game = ConnectFourGame()
+
     while True:
         display_title()
         print("\n1. Player vs Computer")
         print("2. Player vs Player")
         print("3. Exit")
         choice = input("\nChoose: ").strip()
+
         if choice == "3":
             print("\nThanks for playing Connect Four!")
             break
         if choice not in {"1", "2"}:
             print("\nInvalid choice! Please choose 1, 2, or 3.")
             continue
+
         difficulty = choose_difficulty() if choice == "1" else MEDIUM
         first_player = choose_first_player("computer" if choice == "1" else "player")
         player_mode = "computer" if choice == "1" else "player"
@@ -388,10 +431,13 @@ def main(record_result=None):
             options={"player_mode": player_mode, "first_player": first_player},
         )
         result = game.play(game.setup(config), config)
+
         if record_result:
             record_result("connect_four", result.outcome)
+
         if not play_again():
             print("\nThanks for playing Connect Four!")
             break
+
 if __name__ == "__main__":
     main()

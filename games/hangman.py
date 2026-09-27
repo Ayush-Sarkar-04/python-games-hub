@@ -97,7 +97,7 @@ class HangmanGame:
             raise ValueError("Hangman custom attempts must be between 3 and 10")
         category = config.options.get("category") if config.options else None
         if category not in self.words:
-            category = choose_category(self.words)
+            raise ValueError("Hangman requires a valid category in SessionConfig.options")
         limits = difficulty or {"min_length": 1, "max_length": 999}
         words = [w for w in self.words[category]["words"] if limits["min_length"] <= len(w) <= limits["max_length"] and w.isalpha()]
         word = random.choice(words or [w for w in self.words[category]["words"] if w.isalpha()])
@@ -184,7 +184,7 @@ class HangmanGame:
             mode=config.mode,
             moves=state.moves,
             metadata={
-                "category": data["category"],
+                "configuration": {"category": data["category"]},
                 "word_length": len(data["word"]),
                 "hint_used": data["hint_used"],
                 "mistakes": data["max_attempts"] - data["attempts"],
@@ -201,7 +201,12 @@ def main():
         if not difficulty:
             print("Invalid choice! Please choose 1, 2, or 3.")
             continue
-        config = SessionConfig(game="hangman", difficulty=difficulty)
+        category = choose_category(game.words)
+        config = SessionConfig(
+            game="hangman",
+            difficulty=difficulty,
+            options={"category": category},
+        )
         state = game.setup(config)
         game.play(state, config)
         if input("\nPlay again? (y/n): ").strip().lower() != "y":
