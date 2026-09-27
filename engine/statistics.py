@@ -1,8 +1,4 @@
-"""Statistics persistence foundation.
-
-Competitive statistics are intentionally game-appropriate. Consumers must not
-assume every game uses win/loss/draw-shaped outcomes.
-"""
+"""Game statistics persistence."""
 
 from pathlib import Path
 from typing import Any

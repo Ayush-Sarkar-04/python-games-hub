@@ -3,50 +3,33 @@ import random
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from urllib.parse import urlencode
+from engine.game import SessionConfig
+from engine.result import GameResult
+from engine.state import GameState
+from engine.utils import display_title
 WORD_API = "https://random-word-api.herokuapp.com/word"
 FALLBACK_WORDS = {
-    "1": ["apple", "table", "house", "water", "happy", "green"],
-    "2": ["journey", "computer", "football", "library", "diamond", "weather"],
-    "3": ["adventure", "knowledge", "algorithm", "butterfly", "challenge", "important"]
+    "easy": ["apple", "table", "house", "water", "happy", "green"],
+    "medium": ["journey", "computer", "football", "library", "diamond", "weather"],
+    "hard": ["adventure", "knowledge", "algorithm", "butterfly", "challenge", "important"],
 }
 DIFFICULTY = {
-    "1": ("Easy", 4, 6),
-    "2": ("Medium", 6, 8),
-    "3": ("Hard", 8, 10)
+    "easy": ("Easy", 4, 6),
+    "medium": ("Medium", 6, 8),
+    "hard": ("Hard", 8, 10),
 }
 MAX_ATTEMPTS = 3
 SCORE_BY_ATTEMPT = {1: 3, 2: 2, 3: 1}
-def display_title():
-    print("\n" + "=" * 48)
-    print("              WORD SCRAMBLE")
-    print("=" * 48)
-    print("            Unscramble. Guess. Win.")
-    print("=" * 48)
-def choose_difficulty():
-    while True:
-        print("\n" + "-" * 48)
-        print("                 DIFFICULTY")
-        print("-" * 48)
-        print("  1. Easy")
-        print("  2. Medium")
-        print("  3. Hard")
-        print("  4. Exit")
-        choice = input("\nChoose: ").strip()
-        if choice in DIFFICULTY:
-            return choice
-        if choice == "4":
-            return None
-        print("Invalid choice! Please choose 1, 2, 3, or 4.")
+HINT_SCHEDULE = {
+    "easy": (1, 1),
+    "medium": (0, 1),
+    "hard": (0, 0),
+}
 def get_word(difficulty):
     _, min_length, max_length = DIFFICULTY[difficulty]
-    params = {
-        "number": 1,
-        "minLength": min_length,
-        "maxLength": max_length,
-    }
-    url = f"{WORD_API}?{urlencode(params)}"
+    params = urlencode({"number": 1, "minLength": min_length, "maxLength": max_length})
     try:
-        with urlopen(url, timeout=5) as response:
+        with urlopen(f"{WORD_API}?{params}", timeout=5) as response:
             data = json.loads(response.read().decode("utf-8"))
         if data and isinstance(data[0], str):
             word = data[0].lower()
@@ -65,131 +48,132 @@ def scramble_word(word):
 def get_guess():
     while True:
         guess = input("\nYour guess: ").strip().lower()
-        if not guess:
-            print("Please enter a word.")
-            continue
-        if not guess.isalpha():
-            print("Please use letters only.")
-            continue
-        return guess
-def display_attempts(attempts_used):
-    remaining = MAX_ATTEMPTS - attempts_used
-    markers = "● " * attempts_used + "○ " * remaining
-    print(f"Attempts: {markers.strip()}")
-def display_round_header(difficulty, scrambled, round_number):
-    difficulty_name = DIFFICULTY[difficulty][0]
-    print("\n" + "=" * 48)
-    print(f"                    ROUND {round_number}")
-    print("=" * 48)
-    print(f"Difficulty : {difficulty_name}")
-    print(f"Word length: {len(scrambled)}")
-    print()
-    print("             " + "  ".join(scrambled.upper()))
-    print("=" * 48)
-HINT_SCHEDULE = {
-    "1": {"after_first_miss": 1, "on_last_try": 2},
-    "2": {"after_first_miss": 1, "on_last_try": 1},
-    "3": {"after_first_miss": 0, "on_last_try": 1},
-}
-def reveal_more_letters(word, revealed_indices, count):
-    available = [i for i in range(len(word)) if i not in revealed_indices]
-    count = min(count, len(available))
-    revealed_indices.update(random.sample(available, count))
-def render_hint(word, revealed_indices):
+        if guess.isalpha():
+            return guess
+        print("Please enter letters only.")
+def reveal_more_letters(word, revealed, count):
+    available = [i for i in range(len(word)) if i not in revealed]
+    revealed.update(random.sample(available, min(count, len(available))))
+def render_hint(word, revealed):
     return "  ".join(
-        letter.upper() if i in revealed_indices else "_"
-        for i, letter in enumerate(word)
+        letter.upper() if index in revealed else "_"
+        for index, letter in enumerate(word)
     )
-def display_result(won, word, attempts_used):
+def display_result(won, word, attempts):
     print("\n" + "=" * 48)
+    print("                 CORRECT!" if won else "                GAME OVER")
+    print("=" * 48)
     if won:
-        print("                 CORRECT!")
-        print("=" * 48)
-        if attempts_used == 1:
-            print("          Perfect first-try solve!")
-        elif attempts_used == MAX_ATTEMPTS:
-            print("          That was close!")
-        else:
-            print("             Nice work!")
+        messages = {
+            1: "          Perfect first-try solve!",
+            2: "             Nice work!",
+            3: "          That was close!",
+        }
+        print(messages[attempts])
     else:
-        print("                GAME OVER")
-        print("=" * 48)
         print("             Out of attempts!")
     print(f"\nThe word was: {word.upper()}")
     print("=" * 48)
-def play_round(difficulty, round_number):
-    word = get_word(difficulty)
-    scrambled = scramble_word(word)
-    attempts_used = 0
-    revealed_indices = set()
-    schedule = HINT_SCHEDULE[difficulty]
-    display_round_header(difficulty, scrambled, round_number)
-    while attempts_used < MAX_ATTEMPTS:
-        display_attempts(attempts_used)
-        guess = get_guess()
-        attempts_used += 1
-        if guess == word:
-            display_result(True, word, attempts_used)
-            return "win"
-        remaining = MAX_ATTEMPTS - attempts_used
-        if remaining:
-            if attempts_used == 1 and schedule["after_first_miss"]:
-                reveal_more_letters(word, revealed_indices, schedule["after_first_miss"])
-            if remaining == 1:
-                reveal_more_letters(word, revealed_indices, schedule["on_last_try"])
-            if revealed_indices:
-                print(f"\nHint: {render_hint(word, revealed_indices)}")
-            if remaining == 1:
-                print("Very close! One attempt left.")
+class WordScrambleGame:
+    name = "Word Scramble"
+    description = "Unscramble a word before you run out of attempts"
+    def __init__(self):
+        self.win_streak = 0
+        self.best_streak = 0
+        self.total_score = 0
+        self.rounds = 0
+    def setup(self, config: SessionConfig) -> GameState:
+        if config.game != "word_scramble":
+            raise ValueError("WordScrambleGame requires game='word_scramble'")
+        if config.difficulty not in DIFFICULTY:
+            raise ValueError(f"Unsupported Word Scramble difficulty: {config.difficulty}")
+        word = get_word(config.difficulty)
+        return GameState(
+            game="word_scramble",
+            data={
+                "word": word,
+                "scrambled": scramble_word(word),
+                "attempts": 0,
+                "revealed": set(),
+                "score": 0,
+            },
+        )
+    def play(self, state: GameState, config: SessionConfig) -> GameResult:
+        state.set_status("playing")
+        self.rounds += 1
+        data = state.data
+        word = data["word"]
+        first_hint, last_hint = HINT_SCHEDULE[config.difficulty]
+        display_title("WORD SCRAMBLE")
+        print(f"Difficulty : {DIFFICULTY[config.difficulty][0]}")
+        print(f"Word length: {len(word)}")
+        print("\n             " + "  ".join(data["scrambled"].upper()))
+        print("=" * 48)
+        while data["attempts"] < MAX_ATTEMPTS:
+            remaining = MAX_ATTEMPTS - data["attempts"]
+            print(f"\nAttempts: {'● ' * data['attempts'] + '○ ' * remaining}".strip())
+            guess = get_guess()
+            data["attempts"] += 1
+            state.record_move({"guess": guess, "attempt": data["attempts"]})
+            if guess == word:
+                data["score"] = SCORE_BY_ATTEMPT[data["attempts"]]
+                return self._finish(state, config, "win")
+            remaining = MAX_ATTEMPTS - data["attempts"]
+            if remaining:
+                if data["attempts"] == 1:
+                    reveal_more_letters(word, data["revealed"], first_hint)
+                if remaining == 1:
+                    reveal_more_letters(word, data["revealed"], last_hint)
+                if data["revealed"]:
+                    print(f"\nHint: {render_hint(word, data['revealed'])}")
+                print("Very close! One attempt left." if remaining == 1
+                      else "Not quite! Give it another shot.")
+        return self._finish(state, config, "loss")
+    def _finish(self, state, config, outcome):
+        data = state.data
+        state.set_status(outcome)
+        score = data["score"]
+        if config.is_competitive:
+            if outcome == "win":
+                self.win_streak += 1
+                self.best_streak = max(self.best_streak, self.win_streak)
+                self.total_score += score
             else:
-                print("Not quite! Give it another shot.")
-    display_result(False, word, attempts_used)
-    return "loss"
-def play_again():
+                self.win_streak = 0
+        display_result(outcome == "win", data["word"], data["attempts"])
+        return GameResult(
+            game="word_scramble",
+            outcome=outcome,
+            difficulty=config.difficulty,
+            mode=config.mode,
+            score=score,
+            moves=state.moves,
+            metadata={
+                "attempts": data["attempts"],
+                "word_length": len(data["word"]),
+                "win_streak": self.win_streak,
+                "best_streak": self.best_streak,
+                "total_score": self.total_score,
+            },
+        )
+def main():
+    game = WordScrambleGame()
     while True:
-        choice = input("\nPlay again? (y/n): ").strip().lower()
-        if choice in ("y", "n"):
-            return choice == "y"
-        print("Invalid input! Enter y or n.")
-def main(record_result=None):
-    score = 0
-    rounds = 0
-    win_streak = 0
-    best_streak = 0
-    while True:
-        display_title()
-        difficulty = choose_difficulty()
-        if difficulty is None:
-            print("\nThanks for playing Word Scramble!")
-            break
-        rounds += 1
-        result = play_round(difficulty, rounds)
-        if result == "win":
-            # Earlier solves earn more points and consecutive wins build a streak bonus.
-            # The round function already consumed the attempts; award a simple round point here.
-            score += 1
-            win_streak += 1
-            best_streak = max(best_streak, win_streak)
-        else:
-            win_streak = 0
-        if record_result:
-            record_result("word_scramble", result)
-        print("\n" + "-" * 48)
-        print("                 SCOREBOARD")
-        print("-" * 48)
-        print(f"                 Wins: {score}")
-        print(f"                 Rounds: {rounds}")
-        print(f"                 Success: {score}/{rounds}")
-        print(f"                 Win streak: {win_streak}")
-        print(f"                 Best streak: {best_streak}")
-        print("-" * 48)
-        if not play_again():
-            print("\n" + "=" * 48)
-            print("              FINAL SCORE")
-            print("=" * 48)
-            print(f"              {score} / {rounds}")
-            print(f"              Best streak: {best_streak}")
-            print("=" * 48)
+        display_title("WORD SCRAMBLE")
+        print("\n1. Easy\n2. Medium\n3. Hard\n4. Exit")
+        difficulty = {
+            "1": "easy",
+            "2": "medium",
+            "3": "hard",
+        }.get(input("\nChoose: ").strip())
+        if not difficulty:
+            if input_choice := input("\nExit? (y/n): ").strip().lower() == "y":
+                print("\nThanks for playing Word Scramble!")
+                break
+            continue
+        config = SessionConfig(game="word_scramble", difficulty=difficulty)
+        game.play(game.setup(config), config)
+        if input("\nPlay again? (y/n): ").strip().lower() != "y":
             print("\nThanks for playing Word Scramble!")
             break
 if __name__ == "__main__":

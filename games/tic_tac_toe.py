@@ -1,10 +1,10 @@
 import random
 from copy import deepcopy
 from time import sleep
-from typing import Callable
 from engine.game import SessionConfig
 from engine.result import GameResult
 from engine.state import GameState
+from engine.utils import play_again
 EASY = "1"
 MEDIUM = "2"
 HARD = "3"
@@ -42,21 +42,6 @@ def get_winner(board):
     return None
 def check_winner(board):
     return get_winner(board) is not None
-def get_player_move(board, player):
-    while True:
-        choice = input(f"Player {player}, choose a position (1-9): ").strip()
-        try:
-            position = int(choice) - 1
-        except ValueError:
-            print("Invalid input! Please enter a number from 1 to 9.")
-            continue
-        if position < 0 or position > 8:
-            print("Invalid position! Please choose a number from 1 to 9.")
-            continue
-        if board[position] != " ":
-            print("Position already taken! Choose another position.")
-            continue
-        return position
 def get_empty_positions(board):
     return [i for i in range(9) if board[i] == " "]
 def find_winning_move(board, player):
@@ -159,28 +144,6 @@ def display_result(message):
     print("=" * 42)
     print(f"                 {message}")
     print("=" * 42)
-def play_game(mode, difficulty=None, personality="Balanced"):
-    board = [" "] * 9
-    player = "X"
-    for _ in range(9):
-        display_board(board)
-        if mode == "computer" and player == "O":
-            position = computer_move(board, difficulty, personality)
-            print(f"Computer chooses position {position + 1}.")
-        else:
-            position = get_player_move(board, player)
-        board[position] = player
-        if check_winner(board):
-            display_board(board)
-            if mode == "computer" and player == "O":
-                display_result("Computer wins!")
-                return "loss"
-            display_result(f"Player {player} wins!")
-            return "win"
-        player = "O" if player == "X" else "X"
-    display_board(board)
-    display_result("It's a draw!")
-    return "draw"
 def choose_difficulty():
     while True:
         print("\n" + "-" * 42)
@@ -193,12 +156,6 @@ def choose_difficulty():
         if difficulty in (EASY, MEDIUM, HARD):
             return difficulty
         print("Invalid choice! Please choose 1, 2, or 3.")
-def play_again():
-    while True:
-        choice = input("\nPlay again? (y/n): ").strip().lower()
-        if choice in ("y", "n"):
-            return choice == "y"
-        print("Invalid input! Enter y or n.")
 def _hint_move(board, difficulty, personality):
     simulated_board = deepcopy(board)
     if difficulty == EASY:
@@ -211,7 +168,7 @@ def _display_replay(move_history, delay=0.0):
         display_board(board)
         if delay > 0:
             sleep(delay)
-def _get_v2_player_move(state, player, difficulty, personality, hint_used):
+def _get_player_move(state, player, difficulty, personality, hint_used):
     while True:
         choice = input(
             f"Player {player}, choose a position (1-9)"
@@ -275,6 +232,8 @@ class TicTacToeGame:
             print(f"You are X. Computer is O. Personality: {personality}")
         if config.mode == "practice":
             print("Practice Mode: this session does not count toward competitive streaks.")
+        outcome = "draw"
+        message = "It's a draw!"
         for _ in range(9):
             display_board(board)
             player = state.data["current_player"]
@@ -283,59 +242,39 @@ class TicTacToeGame:
                 print(f"Computer chooses position {position + 1}.")
             else:
                 while True:
-                    position, hint_used = _get_v2_player_move(
+                    position, hint_used = _get_player_move(
                         state,
                         player,
                         difficulty,
                         personality,
                         state.data["hint_used"],
                     )
-                    if position is not None:
-                        state.data["hint_used"] = hint_used
-                        break
                     state.data["hint_used"] = hint_used
+                    if position is not None:
+                        break
             board[position] = player
             state.record_move({"player": player, "position": position})
             if check_winner(board):
-                display_board(board)
                 if player_mode == "computer" and player == "O":
                     outcome = "loss"
                     message = "Computer wins!"
                 else:
                     outcome = "win"
                     message = f"Player {player} wins!"
-                display_result(message)
-                state.set_status(outcome)
-                if config.is_competitive and player_mode == "computer":
-                    if outcome == "win":
-                        self.win_streak += 1
-                        self.best_streak = max(self.best_streak, self.win_streak)
-                    else:
-                        self.win_streak = 0
-                result = GameResult(
-                    game="tic_tac_toe",
-                    outcome=outcome,
-                    difficulty=config.difficulty,
-                    mode=config.mode,
-                    moves=state.moves,
-                    metadata={
-                        "player_mode": player_mode,
-                        "personality": personality,
-                        "hint_used": state.data["hint_used"],
-                        "win_streak": self.win_streak,
-                        "best_streak": self.best_streak,
-                    },
-                )
-                return self._finish_with_optional_replay(result, state)
+                break
             state.data["current_player"] = "O" if player == "X" else "X"
         display_board(board)
-        display_result("It's a draw!")
-        state.set_status("draw")
+        display_result(message)
+        state.set_status(outcome)
         if config.is_competitive and player_mode == "computer":
-            self.win_streak = 0
+            if outcome == "win":
+                self.win_streak += 1
+                self.best_streak = max(self.best_streak, self.win_streak)
+            else:
+                self.win_streak = 0
         result = GameResult(
             game="tic_tac_toe",
-            outcome="draw",
+            outcome=outcome,
             difficulty=config.difficulty,
             mode=config.mode,
             moves=state.moves,
@@ -349,46 +288,33 @@ class TicTacToeGame:
         )
         return self._finish_with_optional_replay(result, state)
     def _finish_with_optional_replay(self, result, state):
-        """Offer replay without changing the recorded result or state."""
-        choice = input("\nReplay this game? (y/n): ").strip().lower()
-        if choice == "y":
-            print("\nREPLAY")
-            _display_replay(state.move_history)
         return result
 def main(record_result=None):
-    """Legacy standalone entry point."""
-    win_streak = 0
-    best_streak = 0
+    game = TicTacToeGame()
     while True:
         display_title()
         print("\n1. Player vs Computer")
         print("2. Player vs Player")
         print("3. Exit")
         choice = input("\nChoose: ").strip()
-        if choice == "1":
-            difficulty = choose_difficulty()
-            personality = choose_personality()
-            print(f"\nYou are X. Computer is O. Personality: {personality}")
-            result = play_game("computer", difficulty, personality)
-            if result == "win":
-                win_streak += 1
-                best_streak = max(best_streak, win_streak)
-            elif result == "loss":
-                win_streak = 0
-            if record_result:
-                record_result("tic_tac_toe", result)
-            print(f"Win streak: {win_streak} | Best: {best_streak}")
-        elif choice == "2":
-            print("\nPlayer X goes first.")
-            result = play_game("player")
-            if record_result:
-                record_result("tic_tac_toe", result)
-        elif choice == "3":
+        if choice == "3":
             print("\nThanks for playing Tic-Tac-Toe!")
             break
-        else:
+        if choice not in {"1", "2"}:
             print("\nInvalid choice! Please choose 1, 2, or 3.")
             continue
+        difficulty = choose_difficulty() if choice == "1" else MEDIUM
+        personality = choose_personality() if choice == "1" else "Balanced"
+        player_mode = "computer" if choice == "1" else "player"
+        config = SessionConfig(
+            game="tic_tac_toe",
+            difficulty={"1": "easy", "2": "medium", "3": "hard"}[difficulty],
+            options={"player_mode": player_mode, "personality": personality},
+        )
+        result = game.play(game.setup(config), config)
+        if record_result:
+            record_result("tic_tac_toe", result.outcome)
+        print(f"Win streak: {game.win_streak} | Best: {game.best_streak}")
         if not play_again():
             print("\nThanks for playing Tic-Tac-Toe!")
             break

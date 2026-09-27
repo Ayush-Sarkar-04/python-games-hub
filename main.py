@@ -3,6 +3,10 @@ from engine.game import SessionConfig
 from engine.utils import choose_from_menu, display_title
 from games.tic_tac_toe import TicTacToeGame
 from games.connect_four import ConnectFourGame
+from games.hangman import HangmanGame
+from games.rock_paper_scissors import RockPaperScissorsGame
+from games.word_scramble import WordScrambleGame
+from games.snake import SnakeGame
 @dataclass(frozen=True)
 class GameDefinition:
     name: str
@@ -16,17 +20,17 @@ GAME_REGISTRY = {
         "Tic-Tac-Toe",
         "Classic 3x3 strategy game",
         "games.tic_tac_toe",
-        frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
+        frozenset({"replay", "history", "hint", "practice"}),
         frozenset({"competitive", "practice"}),
-        ("easy", "medium", "hard", "custom"),
+        ("easy", "medium", "hard"),
     ),
     "hangman": GameDefinition(
         "Hangman",
         "Guess the hidden word before you run out of attempts",
         "games.hangman",
-        frozenset({"hint", "practice", "custom_difficulty"}),
+        frozenset({"hint", "practice"}),
         frozenset({"competitive", "practice"}),
-        ("easy", "medium", "hard", "custom"),
+        ("easy", "medium", "hard"),
     ),
     "rock_paper_scissors": GameDefinition(
         "Rock Paper Scissors",
@@ -48,9 +52,9 @@ GAME_REGISTRY = {
         "Connect Four",
         "Connect four pieces before your opponent",
         "games.connect_four",
-        frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
+        frozenset({"replay", "history", "hint", "practice"}),
         frozenset({"competitive", "practice"}),
-        ("easy", "medium", "hard", "custom"),
+        ("easy", "medium", "hard"),
     ),
     "snake": GameDefinition(
         "Snake",
@@ -61,6 +65,17 @@ GAME_REGISTRY = {
         ("easy", "medium", "hard"),
     ),
 }
+
+GAME_CLASSES = {
+    "tic_tac_toe": TicTacToeGame,
+    "connect_four": ConnectFourGame,
+    "hangman": HangmanGame,
+    "rock_paper_scissors": RockPaperScissorsGame,
+    "word_scramble": WordScrambleGame,
+    "snake": SnakeGame,
+}
+
+
 def build_session_config(
     game: str,
     difficulty: str,
@@ -71,9 +86,9 @@ def build_session_config(
     if game not in GAME_REGISTRY:
         raise ValueError(f"Unknown game: {game}")
     definition = GAME_REGISTRY[game]
-    if difficulty == "custom" and "custom_difficulty" not in definition.capabilities:
-        raise ValueError(f"{game} does not support custom difficulty")
     if difficulty not in definition.difficulties:
+        if difficulty == "custom":
+            raise ValueError(f"Unsupported custom difficulty for {game}")
         raise ValueError(f"Unsupported difficulty for {game}: {difficulty}")
     if mode not in definition.modes:
         raise ValueError(f"Unsupported mode for {game}: {mode}")
@@ -92,7 +107,6 @@ def display_game_menu() -> None:
     print("4. Settings")
     print("5. Exit")
 def choose_game(*, input_func=input) -> str:
-    """Let the hub select a game using its stable registry identifier."""
     print("\nChoose Game")
     entries = list(GAME_REGISTRY.items())
     for number, (_, definition) in enumerate(entries, 1):
@@ -108,29 +122,24 @@ def choose_session_config(game: str, *, input_func=input) -> SessionConfig:
         raise ValueError(f"Unknown game: {game}")
     definition = GAME_REGISTRY[game]
     print(f"\nConfigure Session: {definition.name}")
-    print("1. Easy")
-    print("2. Medium")
-    print("3. Hard")
-    if "custom_difficulty" in definition.capabilities:
-        print("4. Advanced")
-        valid_choices = {"1", "2", "3", "4"}
-    else:
-        valid_choices = {"1", "2", "3"}
+    choices = {
+        str(number): difficulty
+        for number, difficulty in enumerate(definition.difficulties, 1)
+    }
+    for number, difficulty in choices.items():
+        print(f"{number}. {difficulty.title()}")
     difficulty_choice = choose_from_menu(
         "Choose difficulty: ",
-        valid_choices,
+        choices,
         input_func=input_func,
     )
-    if difficulty_choice == "4":
-        raise NotImplementedError(
-            "Advanced custom configuration is implemented in Sprint 3."
-        )
-    difficulty = {
-        "1": "easy",
-        "2": "medium",
-        "3": "hard",
-    }[difficulty_choice]
-    return build_session_config(game, difficulty)
+    return build_session_config(game, choices[difficulty_choice])
+
+
+def launch_game(game: str, config: SessionConfig) -> None:
+    game_instance = GAME_CLASSES[game]()
+    state = game_instance.setup(config)
+    game_instance.play(state, config)
 def choose_session_mode(*, input_func=input) -> str:
     print("\nSession Mode")
     print("1. Competitive")
@@ -141,6 +150,48 @@ def choose_session_mode(*, input_func=input) -> str:
         input_func=input_func,
     )
     return "competitive" if choice == "1" else "practice"
+
+
+def choose_game_options(game: str, *, input_func=input) -> dict:
+    if game != "rock_paper_scissors":
+        return {}
+
+    print("\nVariant")
+    print("1. Standard")
+    print("2. Lizard & Spock")
+    variant_choice = choose_from_menu(
+        "Choose variant: ",
+        {"1", "2"},
+        input_func=input_func,
+    )
+
+    print("\nMatch Type")
+    print("1. Single Game")
+    print("2. Best of...")
+    match_choice = choose_from_menu(
+        "Choose: ",
+        {"1", "2"},
+        input_func=input_func,
+    )
+
+    rounds = 1
+    if match_choice == "2":
+        while True:
+            try:
+                rounds = int(input_func("Number of rounds (2-10): ").strip())
+                if 2 <= rounds <= 10:
+                    break
+            except ValueError:
+                pass
+            print("Please choose a number from 2 to 10.")
+
+    return {
+        "variant": "standard" if variant_choice == "1" else "extended",
+        "match_type": "single" if match_choice == "1" else "match",
+        "rounds": rounds,
+    }
+
+
 def main() -> None:
     while True:
         display_game_menu()
@@ -150,36 +201,28 @@ def main() -> None:
         )
         if choice == "1":
             game = choose_game()
-            try:
-                config = choose_session_config(game)
-            except NotImplementedError as exc:
-                print(f"\n{exc}")
-                input("Press Enter to return to the hub...")
-                continue
-            if game in {"tic_tac_toe", "connect_four"}:
-                mode = choose_session_mode()
-                config = replace(config, mode=mode)
-                if game == "tic_tac_toe":
-                    game_instance = TicTacToeGame()
-                else:
-                    game_instance = ConnectFourGame()
-                state = game_instance.setup(config)
-                game_instance.play(state, config)
-                input("\nPress Enter to return to the hub...")
-            else:
-                print("\nThis game is scheduled for a later migration sprint.")
-                input("Press Enter to return to the hub...")
+            config = choose_session_config(game)
+            options = choose_game_options(game)
+            mode = choose_session_mode()
+            config = replace(config, mode=mode, options=options)
+
+            while True:
+                launch_game(game, config)
+                if input("\nRematch this game? (y/n): ").strip().lower() != "y":
+                    break
+
+            input("\nPress Enter to return to the hub...")
         elif choice == "2":
-            print("\nQuick Play will be connected after game migration.")
+            print("\nQuick Play is not available yet.")
             input("Press Enter to return to the hub...")
         elif choice == "3":
-            print("\nProfile & Statistics foundation is ready.")
+            print("\nProfile & Statistics are not available yet.")
             input("Press Enter to return to the hub...")
         elif choice == "4":
-            print("\nSettings foundation is ready.")
+            print("\nSettings are not available yet.")
             input("Press Enter to return to the hub...")
         else:
-            print("\nV2 foundation session ended.")
+            print("\nThanks for playing.")
             break
 if __name__ == "__main__":
     main()

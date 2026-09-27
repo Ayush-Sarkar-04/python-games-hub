@@ -1,4 +1,4 @@
-"""Standard result model shared by V2 games."""
+"""Shared result model for game sessions."""
 
 from dataclasses import dataclass, field
 from typing import Any

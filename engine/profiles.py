@@ -1,4 +1,4 @@
-"""Profile persistence foundation."""
+"""Player profile persistence."""
 
 from dataclasses import asdict, dataclass
 from pathlib import Path

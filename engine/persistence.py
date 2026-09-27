@@ -1,4 +1,4 @@
-"""Safe JSON persistence boundary for V2 systems."""
+"""Small JSON persistence helper."""
 
 import json
 from pathlib import Path
@@ -6,7 +6,7 @@ from typing import Any
 
 
 class JsonStore:
-    """Small JSON store with atomic replacement and defensive loading."""
+    """JSON storage with atomic writes and safe loading."""
 
     def __init__(self, path: str | Path):
         self.path = Path(path)

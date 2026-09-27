@@ -1,4 +1,4 @@
-"""Lightweight provisional game contract and session configuration."""
+"""Game session configuration and game contract."""
 
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -37,11 +37,7 @@ class SessionConfig:
 
 
 class Game(Protocol):
-    """Provisional V2 game contract.
-
-    This contract is intentionally small. It will be validated with
-    Tic-Tac-Toe and Connect Four before it is frozen.
-    """
+    """Contract implemented by games that run through the hub."""
 
     name: str
     description: str

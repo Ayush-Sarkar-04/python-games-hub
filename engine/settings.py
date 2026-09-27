@@ -1,4 +1,4 @@
-"""Settings persistence foundation."""
+"""Application settings persistence."""
 
 from pathlib import Path
 from typing import Any

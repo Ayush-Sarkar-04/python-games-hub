@@ -1,10 +1,6 @@
-"""Shared terminal helpers used by the V2 hub and games."""
+"""Shared terminal input and display helpers."""
 
 from typing import Iterable
-
-
-def divider(width: int = 64, char: str = "-") -> str:
-    return char * width
 
 
 def display_title(title: str, width: int = 64) -> None:
@@ -19,7 +15,7 @@ def choose_from_menu(
     *,
     input_func=input,
 ) -> str:
-    """Return one valid option without embedding game-specific choices."""
+
     valid = {str(option) for option in options}
     while True:
         choice = input_func(prompt).strip()
@@ -36,9 +32,3 @@ def play_again(*, input_func=input) -> bool:
         print("Invalid input! Enter y or n.")
 
 
-def non_empty_input(prompt: str, *, input_func=input) -> str:
-    while True:
-        value = input_func(prompt).strip()
-        if value:
-            return value
-        print("Input cannot be empty.")

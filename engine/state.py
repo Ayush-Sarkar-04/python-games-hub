@@ -1,4 +1,4 @@
-"""Explicit game-state container for V2 games."""
+"""Mutable state container for a game session."""
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -6,11 +6,7 @@ from typing import Any
 
 @dataclass
 class GameState:
-    """Mutable state owned by one game session.
-
-    Only committed moves should be passed to ``record_move``.
-    AI simulations, hints, and speculative state changes must not use it.
-    """
+    """Mutable state owned by one game session."""
 
     game: str
     status: str = "ready"
@@ -19,7 +15,6 @@ class GameState:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def record_move(self, move: Any) -> None:
-        """Record one committed real move."""
         self.move_history.append(move)
 
     def set_status(self, status: str) -> None:

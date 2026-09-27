@@ -1,13 +1,10 @@
-"""Achievement persistence foundation."""
+"""Achievement persistence."""
 
 from pathlib import Path
 from typing import Any
 
 from .persistence import JsonStore
 
-# Achievement records are profile-owned and intentionally simple.
-# Each key is an achievement id and its value is a record such as:
-# {"unlocked": True, "unlocked_at": "..."}.
 DEFAULT_ACHIEVEMENTS: dict[str, dict[str, Any]] = {}
 
 

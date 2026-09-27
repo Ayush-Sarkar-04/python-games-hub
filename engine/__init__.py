@@ -1,1 +1,1 @@
-"""Core V2 game-platform primitives."""
+"""Shared game hub components."""
