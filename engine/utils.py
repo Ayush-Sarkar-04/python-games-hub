@@ -3,7 +3,17 @@
 from typing import Iterable
 
 
-def display_title(title: str, width: int = 64) -> None:
+def display_title(title: str, width: int = 64, style: str = "default") -> None:
+    if style == "minimal":
+        print(f"\n{title}")
+        return
+    if style == "compact":
+        width = min(width, max(42, len(title) + 8))
+    if style == "classic":
+        print("\n" + "*" * width)
+        print(title.center(width))
+        print("*" * width)
+        return
     print("\n" + "=" * width)
     print(title.center(width))
     print("=" * width)

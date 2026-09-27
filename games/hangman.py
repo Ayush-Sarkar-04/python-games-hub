@@ -82,6 +82,16 @@ def word_complete(word, guessed):
 class HangmanGame:
     name = "Hangman"
     description = "Guess the hidden word before you run out of attempts"
+    CUSTOM_PARAMETERS = {"attempts": (3, 10, "Number of attempts")}
+
+    @classmethod
+    def validate_custom_settings(cls, settings):
+        attempts = settings.get("attempts")
+        if not isinstance(attempts, int) or isinstance(attempts, bool):
+            raise ValueError("Hangman custom attempts must be an integer")
+        if not 3 <= attempts <= 10:
+            raise ValueError("Hangman custom attempts must be between 3 and 10")
+        return {"attempts": attempts}
     def __init__(self, words=None):
         self.words = words or get_words()
         self.win_streak = 0
@@ -94,10 +104,7 @@ class HangmanGame:
         difficulty = DIFFICULTIES.get(config.difficulty)
         attempts = difficulty["attempts"] if difficulty else config.custom_settings.get("attempts", 0)
         if config.difficulty == "custom":
-            if not isinstance(attempts, int) or isinstance(attempts, bool):
-                raise ValueError("Hangman custom attempts must be an integer")
-            if not 3 <= attempts <= 10:
-                raise ValueError("Hangman custom attempts must be between 3 and 10")
+            attempts = self.validate_custom_settings(config.custom_settings)["attempts"]
         category = config.options.get("category") if config.options else None
         if category not in self.words:
             raise ValueError("Hangman requires a valid category in SessionConfig.options")
@@ -194,7 +201,11 @@ class HangmanGame:
             score=score,
             moves=state.moves,
             metadata={
-                "configuration": {"category": data["category"]},
+                "configuration": {
+                    "category": data["category"],
+                    **({"custom_settings": {"attempts": data["max_attempts"]}}
+                       if config.difficulty == "custom" else {}),
+                },
                 "word_length": len(data["word"]),
                 "hint_used": data["hint_used"],
                 "mistakes": mistakes,

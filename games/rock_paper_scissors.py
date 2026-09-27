@@ -14,6 +14,7 @@ BEATS = {
     "lizard": {"paper", "spock"},
     "spock": {"rock", "scissors"},
 }
+# Unpredictable is the deliberately chosen Hard mapping; it is not an objective equivalence.
 DIFFICULTY_PERSONALITY = {"easy": "balanced", "medium": "adaptive", "hard": "unpredictable"}
 def get_player_choice(extended):
     choices = EXTENDED_CHOICES if extended else STANDARD_CHOICES

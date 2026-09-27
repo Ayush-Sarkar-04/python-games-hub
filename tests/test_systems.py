@@ -154,16 +154,17 @@ def test_commit3_statistics_aggregate_competitive_results_only():
     statistics = update_statistics(statistics, rps_result)
     statistics = update_statistics(statistics, practice_result)
 
-    assert statistics["rock_paper_scissors"] == {
-        "matches": 1,
-        "wins": 1,
-        "win_streak": 2,
-        "best_streak": 4,
-        "results_by_personality": {
-            "unpredictable": {"wins": 1},
-        },
-        "lizard_spock_matches": 1,
+    assert statistics["rock_paper_scissors"]["matches"] == 1
+    assert statistics["rock_paper_scissors"]["wins"] == 1
+    assert statistics["rock_paper_scissors"]["win_streak"] == 2
+    assert statistics["rock_paper_scissors"]["best_streak"] == 4
+    assert statistics["rock_paper_scissors"]["results_by_personality"] == {
+        "unpredictable": {"wins": 1},
     }
+    assert statistics["rock_paper_scissors"]["lizard_spock_matches"] == 1
+    assert statistics["rock_paper_scissors"]["recent_results"] == [
+        {"difficulty": "hard", "outcome": "win", "score": 3}
+    ]
     assert "hangman" not in statistics
 
 
@@ -268,3 +269,128 @@ def test_commit3_achievements_exclude_practice_results():
     )
 
     assert NON_REAL_TIME_ACHIEVEMENT_EVALUATOR.evaluate(result) == []
+
+
+def test_statistics_cover_board_games_and_snake():
+    from engine.result import GameResult
+    from engine.statistics import update_statistics
+
+    stats = {}
+    for game in ("tic_tac_toe", "connect_four"):
+        stats = update_statistics(
+            stats,
+            GameResult(game=game, outcome="win", difficulty="hard", mode="competitive", score=3, moves=5),
+        )
+    stats = update_statistics(
+        stats,
+        GameResult(game="snake", outcome="game_over", difficulty="medium", mode="competitive", score=240, moves=20),
+    )
+
+    assert stats["tic_tac_toe"]["wins"] == 1
+    assert stats["connect_four"]["wins"] == 1
+    assert stats["snake"]["best_score"] == 240
+    assert stats["snake"]["top_runs"][0]["score"] == 240
+
+
+def test_difficulty_suggestion_is_advisory():
+    from engine.statistics import suggest_difficulty
+
+    recent = [
+        {"difficulty": "medium", "outcome": "win", "score": 2}
+        for _ in range(5)
+    ]
+    assert suggest_difficulty("tic_tac_toe", {"tic_tac_toe": {"recent_results": recent}}) == "hard"
+
+
+def test_profile_progression_excludes_practice_and_quit():
+    from engine.profiles import Profile, update_profile
+    from engine.result import GameResult
+
+    profile = Profile()
+    updated, style = update_profile(
+        profile,
+        GameResult(game="snake", outcome="game_over", difficulty="easy", mode="competitive", score=50),
+    )
+    assert updated.xp == 1
+    assert updated.level == 1
+    assert style is None
+
+    practice, _ = update_profile(
+        updated,
+        GameResult(game="tic_tac_toe", outcome="win", difficulty="hard", mode="practice"),
+    )
+    assert practice == updated
+
+    quit_profile, _ = update_profile(
+        updated,
+        GameResult(game="snake", outcome="quit", difficulty="easy", mode="competitive"),
+    )
+    assert quit_profile == updated
+
+
+def test_achievement_unlock_persists(tmp_path):
+    from engine.achievements import AchievementStore, unlock_achievements
+    from engine.result import GameResult
+
+    store = AchievementStore(tmp_path / "achievements.json")
+    result = GameResult(
+        game="snake",
+        outcome="game_over",
+        difficulty="hard",
+        mode="competitive",
+        score=250,
+    )
+    earned = unlock_achievements(
+        store,
+        result,
+        {"snake": {"games": 1}},
+    )
+    assert "snake_200" in earned
+    assert store.load()["snake_200"]["unlocked"] is True
+
+
+def test_all_six_achievement_uses_competitive_history():
+    from engine.achievements import ALL_ACHIEVEMENT_EVALUATOR
+    from engine.result import GameResult
+
+    result = GameResult(
+        game="snake",
+        outcome="game_over",
+        difficulty="medium",
+        mode="competitive",
+        score=10,
+    )
+    assert "all_six_games" in ALL_ACHIEVEMENT_EVALUATOR.evaluate(
+        result,
+        context={"games_played": {
+            "tic_tac_toe", "connect_four", "hangman",
+            "rock_paper_scissors", "word_scramble", "snake"
+        }},
+    )
+
+
+def test_export_summary(tmp_path):
+    from main import export_summary
+    from engine.profiles import Profile
+
+    path = export_summary(
+        Profile(name="Player", level=2, xp=12),
+        {"snake": {"best_score": 240}},
+        {"snake_200": {"unlocked": True}},
+        tmp_path / "player_summary.md",
+    )
+    content = path.read_text(encoding="utf-8")
+    assert "# Python Games Hub — Player Summary" in content
+    assert "Snake 200" in content
+    assert "best score" in content.lower()
+
+
+def test_settings_store_rejects_unknown_banner_style(tmp_path):
+    from engine.settings import SettingsStore
+
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save({"banner_style": "rainbow", "auto_suggest_difficulty": False})
+    assert store.load() == {
+        "banner_style": "default",
+        "auto_suggest_difficulty": False,
+    }

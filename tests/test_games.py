@@ -466,3 +466,31 @@ def test_hangman_result_score_rewards_fewer_mistakes(monkeypatch):
     answers = iter(["c", "a", "t"])
     monkeypatch.setattr("builtins.input", lambda _: next(answers))
     assert game.play(state, config).score == 7
+
+
+def test_tic_tac_toe_custom_result_contains_score_and_configuration(monkeypatch):
+    game = TicTacToeGame()
+    config = SessionConfig(
+        game="tic_tac_toe",
+        difficulty="custom",
+        mode="practice",
+        custom_settings={"minimax_depth": 5},
+        options={"player_mode": "player", "personality": "Balanced"},
+    )
+    state = game.setup(config)
+    answers = iter(["1", "2", "4", "5", "7", "n"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    result = game.play(state, config)
+    assert result.score == 5
+    assert result.metadata["configuration"]["custom_settings"] == {"minimax_depth": 5}
+
+
+def test_connect_four_custom_setup_preserves_custom_configuration():
+    config = SessionConfig(
+        game="connect_four",
+        difficulty="custom",
+        custom_settings={"minimax_depth": 6},
+        options={"player_mode": "player", "first_player": "X"},
+    )
+    state = ConnectFourGame().setup(config)
+    assert state.data["custom_settings"] == {"minimax_depth": 6}

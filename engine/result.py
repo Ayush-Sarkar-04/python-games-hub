@@ -28,6 +28,8 @@ class GameResult:
             raise ValueError("difficulty must not be empty")
         if not self.mode.strip():
             raise ValueError("mode must not be empty")
+        if self.mode not in {"competitive", "practice"}:
+            raise ValueError("mode must be 'competitive' or 'practice'")
         if self.score is not None and (
             isinstance(self.score, bool) or not isinstance(self.score, int)
         ):

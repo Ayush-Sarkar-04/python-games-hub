@@ -52,3 +52,8 @@ def test_game_result_rejects_flat_configuration_metadata():
             mode="competitive",
             metadata={"custom_settings": {"minimax_depth": 6}},
         )
+
+
+def test_game_result_rejects_invalid_mode():
+    with pytest.raises(ValueError):
+        GameResult(game="x", outcome="win", difficulty="easy", mode="ranked")

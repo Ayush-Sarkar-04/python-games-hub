@@ -1,6 +1,7 @@
 """Achievement definitions, evaluation, and persistence."""
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -24,47 +25,50 @@ class AchievementDefinition:
 
 
 AchievementRule = Callable[[GameResult], bool]
+ContextAchievementRule = Callable[[GameResult, dict[str, Any]], bool]
 
 
 class AchievementEvaluator:
-    """Evaluate achievement definitions against one game result."""
-
     def __init__(
         self,
         definitions: tuple[AchievementDefinition, ...] = (),
         rules: dict[str, AchievementRule] | None = None,
+        context_rules: dict[str, ContextAchievementRule] | None = None,
     ):
         self.definitions = definitions
         self.rules = rules or {}
+        self.context_rules = context_rules or {}
         definition_ids = {definition.id for definition in definitions}
-        if set(self.rules) - definition_ids:
+        if (set(self.rules) | set(self.context_rules)) - definition_ids:
             raise ValueError("Achievement rules must reference defined achievements")
 
-    def evaluate(self, result: GameResult, unlocked: set[str] | None = None) -> list[str]:
+    def evaluate(
+        self,
+        result: GameResult,
+        unlocked: set[str] | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> list[str]:
         unlocked = unlocked or set()
-        return [
-            definition.id
-            for definition in self.definitions
-            if definition.id not in unlocked
-            and self.rules.get(definition.id, lambda _: False)(result)
-        ]
+        context = context or {}
+        earned = []
+        for definition in self.definitions:
+            if definition.id in unlocked:
+                continue
+            rule = self.rules.get(definition.id)
+            context_rule = self.context_rules.get(definition.id)
+            if rule and rule(result):
+                earned.append(definition.id)
+            elif context_rule and context_rule(result, context):
+                earned.append(definition.id)
+        return earned
 
 
 BOARD_GAME_ACHIEVEMENT_DEFINITIONS = (
-    AchievementDefinition(
-        id="first_victory",
-        name="First Victory",
-        description="Win a competitive game for the first time.",
-    ),
-    AchievementDefinition(
-        id="connect_four_10_win_streak",
-        name="Connect Four Streak",
-        description="Reach a 10-win competitive Connect Four streak.",
-    ),
+    AchievementDefinition("first_victory", "First Victory", "Win a competitive game for the first time."),
+    AchievementDefinition("connect_four_10_win_streak", "Connect Four Streak", "Reach a 10-win competitive Connect Four streak."),
 )
 
-
-BOARD_GAME_ACHIEVEMENT_RULES: dict[str, AchievementRule] = {
+BOARD_GAME_ACHIEVEMENT_RULES = {
     "first_victory": lambda result: result.mode == "competitive" and result.outcome == "win",
     "connect_four_10_win_streak": lambda result: (
         result.game == "connect_four"
@@ -74,61 +78,69 @@ BOARD_GAME_ACHIEVEMENT_RULES: dict[str, AchievementRule] = {
     ),
 }
 
-BOARD_GAME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
-    definitions=BOARD_GAME_ACHIEVEMENT_DEFINITIONS,
-    rules=BOARD_GAME_ACHIEVEMENT_RULES,
-)
-
-
 NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS = (
-    AchievementDefinition(
-        id="perfect_hangman",
-        name="Perfect Hangman",
-        description="Win a competitive Hangman game with zero mistakes.",
-    ),
-    AchievementDefinition(
-        id="rps_lizard_spock_win",
-        name="Lizard & Spock Victory",
-        description="Win a competitive Rock Paper Scissors match using the Lizard & Spock variant.",
-    ),
-    AchievementDefinition(
-        id="word_scramble_first_try",
-        name="Perfect Scramble",
-        description="Solve a competitive Word Scramble round on the first attempt.",
-    ),
+    AchievementDefinition("perfect_hangman", "Perfect Hangman", "Win a competitive Hangman game with zero mistakes."),
+    AchievementDefinition("rps_lizard_spock_win", "Lizard & Spock Victory", "Win a competitive Rock Paper Scissors match using the Lizard & Spock variant."),
+    AchievementDefinition("word_scramble_first_try", "Perfect Scramble", "Solve a competitive Word Scramble round on the first attempt."),
 )
 
-NON_REAL_TIME_ACHIEVEMENT_RULES: dict[str, AchievementRule] = {
+NON_REAL_TIME_ACHIEVEMENT_RULES = {
     "perfect_hangman": lambda result: (
-        result.game == "hangman"
-        and result.mode == "competitive"
-        and result.outcome == "win"
-        and result.metadata.get("mistakes") == 0
+        result.game == "hangman" and result.mode == "competitive"
+        and result.outcome == "win" and result.metadata.get("mistakes") == 0
     ),
     "rps_lizard_spock_win": lambda result: (
-        result.game == "rock_paper_scissors"
-        and result.mode == "competitive"
+        result.game == "rock_paper_scissors" and result.mode == "competitive"
         and result.outcome == "win"
         and result.metadata.get("configuration", {}).get("variant") == "extended"
     ),
     "word_scramble_first_try": lambda result: (
-        result.game == "word_scramble"
-        and result.mode == "competitive"
-        and result.outcome == "win"
-        and result.metadata.get("attempts") == 1
+        result.game == "word_scramble" and result.mode == "competitive"
+        and result.outcome == "win" and result.metadata.get("attempts") == 1
     ),
 }
 
-NON_REAL_TIME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
-    definitions=NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS,
-    rules=NON_REAL_TIME_ACHIEVEMENT_RULES,
+PROGRESSION_ACHIEVEMENT_DEFINITIONS = (
+    AchievementDefinition("snake_200", "Snake 200", "Score more than 200 in a competitive Snake run."),
+    AchievementDefinition("all_six_games", "Full House", "Play all six games in competitive sessions."),
 )
 
-ALL_ACHIEVEMENT_DEFINITIONS = BOARD_GAME_ACHIEVEMENT_DEFINITIONS + NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS
-ALL_ACHIEVEMENT_RULES = {**BOARD_GAME_ACHIEVEMENT_RULES, **NON_REAL_TIME_ACHIEVEMENT_RULES}
+PROGRESSION_ACHIEVEMENT_RULES = {
+    "snake_200": lambda result: (
+        result.game == "snake" and result.mode == "competitive"
+        and (result.score or 0) > 200
+    ),
+}
+
+PROGRESSION_ACHIEVEMENT_CONTEXT_RULES = {
+    "all_six_games": lambda result, context: (
+        result.mode == "competitive"
+        and len(context.get("games_played", set())) >= 6
+    ),
+}
+
+ALL_ACHIEVEMENT_DEFINITIONS = (
+    BOARD_GAME_ACHIEVEMENT_DEFINITIONS
+    + NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS
+    + PROGRESSION_ACHIEVEMENT_DEFINITIONS
+)
+ALL_ACHIEVEMENT_RULES = {
+    **BOARD_GAME_ACHIEVEMENT_RULES,
+    **NON_REAL_TIME_ACHIEVEMENT_RULES,
+    **PROGRESSION_ACHIEVEMENT_RULES,
+}
+ALL_ACHIEVEMENT_CONTEXT_RULES = PROGRESSION_ACHIEVEMENT_CONTEXT_RULES
+
+BOARD_GAME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
+    BOARD_GAME_ACHIEVEMENT_DEFINITIONS, BOARD_GAME_ACHIEVEMENT_RULES
+)
+NON_REAL_TIME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
+    NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS, NON_REAL_TIME_ACHIEVEMENT_RULES
+)
 ALL_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
-    definitions=ALL_ACHIEVEMENT_DEFINITIONS,
-    rules=ALL_ACHIEVEMENT_RULES,
+    ALL_ACHIEVEMENT_DEFINITIONS,
+    ALL_ACHIEVEMENT_RULES,
+    ALL_ACHIEVEMENT_CONTEXT_RULES,
 )
 
 
@@ -151,3 +163,26 @@ class AchievementStore:
 
     def save(self, achievements: dict[str, dict[str, Any]]) -> None:
         self.store.save(achievements)
+
+
+def unlock_achievements(
+    store: AchievementStore,
+    result: GameResult,
+    statistics: dict[str, dict[str, Any]],
+) -> list[str]:
+    records = store.load()
+    unlocked = {achievement_id for achievement_id, record in records.items() if record.get("unlocked")}
+    earned = ALL_ACHIEVEMENT_EVALUATOR.evaluate(
+        result,
+        unlocked,
+        {"games_played": set(statistics)},
+    )
+    timestamp = datetime.now(timezone.utc).isoformat()
+    for achievement_id in earned:
+        records[achievement_id] = {
+            "unlocked": True,
+            "unlocked_at": timestamp,
+        }
+    if earned:
+        store.save(records)
+    return earned

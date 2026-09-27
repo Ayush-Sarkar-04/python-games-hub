@@ -1,25 +1,24 @@
 # Python Games Hub
 
-A terminal-based Python games hub with six independently runnable games and a shared session, state, result, and persistence layer.
+A terminal-based Python games hub with six independently runnable games and a shared session, state, result, persistence, statistics, achievements, and progression layer.
 
 ## Games
 
-- **Tic-Tac-Toe** — Player vs Computer or Player vs Player, Easy/Medium/Hard, computer personalities, minimax, hints, replay, and win streaks.
-- **Connect Four** — Player vs Computer or Player vs Player, Easy/Medium/Hard, gravity, win detection, minimax, hints, replay, and win streaks.
-- **Hangman** — Category-based word selection, difficulty levels, hints, ASCII stages, and streak tracking.
-- **Rock Paper Scissors** — Standard RPS or Lizard-Spock, single games or matches, computer personalities, history-based play, and streak tracking.
-- **Word Scramble** — API-backed word selection with local fallbacks, difficulty levels, hints, attempts, and streak tracking.
-- **Snake** — Real-time terminal gameplay with multiple speeds, keyboard controls, pause/quit, power-ups, wrap-around, and score tracking.
+- **Tic-Tac-Toe** — Player vs Computer or Player vs Player, Easy/Medium/Hard, Advanced custom minimax depth, computer personalities, minimax, hints, replay, and win streaks.
+- **Connect Four** — Player vs Computer or Player vs Player, Easy/Medium/Hard, Advanced custom minimax depth, gravity, win detection, minimax, hints, replay, and win streaks.
+- **Hangman** — Category-based word selection, difficulty levels, Advanced custom attempt count, hints, ASCII stages, scoring, and streak tracking.
+- **Rock Paper Scissors** — Standard RPS or Lizard-Spock, single games or matches, computer personalities, history-based play, scoring, and streak tracking.
+- **Word Scramble** — API-backed word selection with local fallbacks, difficulty levels, hints, attempt-based scoring, and streak tracking.
+- **Snake** — Real-time terminal gameplay with multiple speeds, keyboard controls, pause/quit, power-ups, wrap-around, score tracking, and top-run records.
 
-All six games are connected to the hub. Each game remains independently runnable, while the hub owns session difficulty, mode, and game-specific configuration.
+All six games are connected to the hub. The hub owns session configuration, while each game owns its gameplay rules.
 
-## Architecture
+## V2 Architecture
 
 ```text
 python-games-hub/
 ├── main.py
 ├── engine/
-│   ├── __init__.py
 │   ├── game.py
 │   ├── state.py
 │   ├── result.py
@@ -30,11 +29,10 @@ python-games-hub/
 │   ├── achievements.py
 │   └── settings.py
 ├── games/
-│   ├── __init__.py
 │   ├── tic_tac_toe.py
 │   ├── connect_four.py
-│   ├── hangman.py
 │   ├── rock_paper_scissors.py
+│   ├── hangman.py
 │   ├── word_scramble.py
 │   └── snake.py
 ├── tests/
@@ -52,31 +50,61 @@ python-games-hub/
 └── .gitignore
 ```
 
-### `main.py`
+### Hub flow
 
-Owns the hub menu, game registry, session configuration, and launching of games that are connected to the hub.
+```text
+Hub
+ ↓
+Play / Quick Play
+ ↓
+Choose Game
+ ↓
+Configure Session
+ ↓
+Difficulty / Advanced
+ ↓
+Game receives SessionConfig
+ ↓
+GameResult
+ ↓
+Statistics + Achievements + Profile Progression
+ ↓
+Persistence
+```
 
-### `engine/`
+The registry is the single source of game registration. Each registry entry declares its game class, supported modes, standard difficulties, capabilities, configuration options, and custom parameters where applicable.
 
-Contains shared models and supporting systems:
+## Shared systems
 
-- `game.py` — session configuration and game contract
-- `state.py` — mutable state for a game session
-- `result.py` — standard game result model
-- `utils.py` — shared terminal input and display helpers
-- `persistence.py` — JSON storage
-- `profiles.py` — player profile storage
-- `statistics.py` — game statistics storage
-- `achievements.py` — achievement storage
-- `settings.py` — application settings storage
+- **SessionConfig** — hub-owned difficulty, mode, custom settings, and game options.
+- **GameState** — explicit mutable state and committed move history.
+- **GameResult** — standardized outcome, score, move count, and structured configuration metadata.
+- **Statistics** — competitive-only per-game records, streaks, scoring records, and Snake top runs.
+- **Achievements** — code-defined achievement definitions with profile-owned persisted unlock state.
+- **Profile** — player identity, aggregate XP/level, and cosmetic terminal-style unlocks.
+- **Settings** — banner style and advisory difficulty suggestions.
+- **Persistence** — safe JSON storage with atomic writes.
+- **Export** — readable Markdown player summary containing profile, statistics, achievements, and progression.
 
-### `games/`
+Practice sessions are deliberately excluded from competitive statistics, achievements, and competitive progression.
 
-Contains the six game implementations. Each game keeps its gameplay rules and terminal presentation locally rather than forcing every game into the same feature set.
+## Custom Difficulty
 
-### `tests/`
+Advanced / Custom is shown only for games that declare meaningful custom parameters:
 
-`test_games.py` contains the tests for all six games. The remaining test files cover the shared engine, persistence, registry, and hub flow.
+- Tic-Tac-Toe: minimax depth **1–9**
+- Connect Four: minimax depth **1–6**
+- Hangman: attempts **3–10**
+
+The game validates the parameters. The hub does not silently clamp invalid values.
+
+Snake intentionally remains Easy/Medium/Hard only.
+
+## Progression
+
+Competitive completed sessions contribute simple aggregate XP. A competitive win contributes an additional XP point. Snake `game_over` runs contribute activity but are never treated as synthetic wins.
+
+Progression is cosmetic-only. It does not alter gameplay, balancing, or player statistics.
 
 ## Running
 
@@ -99,12 +127,12 @@ python games/word_scramble.py
 python games/snake.py
 ```
 
-The project uses the Python standard library at runtime. `pytest` is used for development and testing.
+Runtime persistence is stored under `.game_data/` and is ignored by Git.
 
 Run the test suite:
 
 ```bash
-pytest -q
+python -m pytest -q
 ```
 
 ## Design Principles
@@ -115,8 +143,9 @@ pytest -q
 - Keep game-specific features optional instead of forcing a uniform interface.
 - Keep the hub static and predictable rather than introducing dynamic plugin discovery.
 - Prefer straightforward Python over unnecessary abstraction.
-- Keep the games independently runnable as well as accessible through the hub where integrated.
+- Keep all six games independently runnable.
+- Keep progression aggregate and cosmetic-only.
 
 ## Scope
 
-The project focuses on terminal games and a clean, maintainable Python architecture. It does not aim to become a GUI, web, online multiplayer, database, or plugin platform.
+The project remains a Python terminal game platform. It does not aim to become a GUI, web application, online multiplayer platform, database-backed service, generic game engine, plugin ecosystem, or AI research platform.

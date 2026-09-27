@@ -37,3 +37,40 @@ def test_practice_session_is_explicit():
     config = build_session_config("tic_tac_toe", "easy", mode="practice")
     assert config.mode == "practice"
     assert not config.is_competitive
+
+
+def test_hangman_declares_custom_difficulty():
+    assert "custom_difficulty" in GAME_REGISTRY["hangman"].capabilities
+
+
+def test_registry_contains_all_game_classes():
+    assert {definition.game_class.__name__ for definition in GAME_REGISTRY.values()} == {
+        "TicTacToeGame",
+        "ConnectFourGame",
+        "HangmanGame",
+        "RockPaperScissorsGame",
+        "WordScrambleGame",
+        "SnakeGame",
+    }
+
+
+def test_all_registered_games_accept_hub_session_configuration():
+    from main import GAME_REGISTRY, build_session_config
+
+    options = {
+        "tic_tac_toe": {"player_mode": "computer", "personality": "Balanced"},
+        "connect_four": {"player_mode": "computer", "first_player": "X"},
+        "hangman": {"category": "animals"},
+        "rock_paper_scissors": {"variant": "standard", "match_type": "single", "rounds": 1},
+        "word_scramble": {},
+        "snake": {"wrap": False},
+    }
+    for game, definition in GAME_REGISTRY.items():
+        config = build_session_config(game, "medium", options=options[game])
+        instance = (
+            definition.game_class({"animals": {"name": "Animals", "words": ["cat"]}})
+            if game == "hangman"
+            else definition.game_class()
+        )
+        state = instance.setup(config)
+        assert state.game == game

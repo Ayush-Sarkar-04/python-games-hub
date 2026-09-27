@@ -323,6 +323,16 @@ class TicTacToeGame:
 
     name = "Tic-Tac-Toe"
     description = "Classic 3x3 strategy game"
+    CUSTOM_PARAMETERS = {"minimax_depth": (1, 9, "Minimax depth")}
+
+    @classmethod
+    def validate_custom_settings(cls, settings):
+        depth = settings.get("minimax_depth")
+        if isinstance(depth, bool) or not isinstance(depth, int):
+            raise ValueError("Tic-Tac-Toe custom minimax_depth must be an integer")
+        if not CUSTOM_MINIMAX_DEPTH_MIN <= depth <= CUSTOM_MINIMAX_DEPTH_MAX:
+            raise ValueError("Tic-Tac-Toe custom minimax_depth must be between 1 and 9")
+        return {"minimax_depth": depth}
 
     def __init__(self):
         self.win_streak = 0
@@ -338,15 +348,7 @@ class TicTacToeGame:
 
         custom_settings = {}
         if config.difficulty == "custom":
-            depth = config.custom_settings.get("minimax_depth")
-            if isinstance(depth, bool) or not isinstance(depth, int):
-                raise ValueError("Tic-Tac-Toe custom minimax_depth must be an integer")
-            if not CUSTOM_MINIMAX_DEPTH_MIN <= depth <= CUSTOM_MINIMAX_DEPTH_MAX:
-                raise ValueError(
-                    f"Tic-Tac-Toe custom minimax_depth must be between "
-                    f"{CUSTOM_MINIMAX_DEPTH_MIN} and {CUSTOM_MINIMAX_DEPTH_MAX}"
-                )
-            custom_settings["minimax_depth"] = depth
+            custom_settings = self.validate_custom_settings(config.custom_settings)
 
         player_mode = config.options.get("player_mode", "computer")
         if player_mode not in {"computer", "player"}:
@@ -438,6 +440,7 @@ class TicTacToeGame:
                     outcome=outcome,
                     difficulty=config.difficulty,
                     mode=config.mode,
+                    score=self._score(config.difficulty, outcome, custom_depth),
                     moves=state.moves,
                     metadata={
                         "configuration": configuration,
@@ -466,6 +469,7 @@ class TicTacToeGame:
             outcome="draw",
             difficulty=config.difficulty,
             mode=config.mode,
+            score=self._score(config.difficulty, "draw", custom_depth),
             moves=state.moves,
             metadata={
                 "configuration": configuration,
@@ -475,6 +479,14 @@ class TicTacToeGame:
             },
         )
         return self._finish_with_optional_replay(result, state)
+
+    @staticmethod
+    def _score(difficulty, outcome, custom_depth):
+        if outcome != "win":
+            return 0
+        if difficulty == "custom":
+            return min(custom_depth, 5)
+        return {"easy": 1, "medium": 2, "hard": 3}[difficulty]
 
     def _finish_with_optional_replay(self, result, state):
         """Offer replay without changing the recorded result or state."""

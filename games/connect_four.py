@@ -266,6 +266,16 @@ def _get_player_move(state, player, difficulty, hint_used, custom_depth=None):
 class ConnectFourGame:
     name = "Connect Four"
     description = "Connect four pieces before your opponent"
+    CUSTOM_PARAMETERS = {"minimax_depth": (1, 6, "Minimax depth")}
+
+    @classmethod
+    def validate_custom_settings(cls, settings):
+        depth = settings.get("minimax_depth")
+        if isinstance(depth, bool) or not isinstance(depth, int):
+            raise ValueError("Connect Four custom minimax_depth must be an integer")
+        if not CUSTOM_MINIMAX_DEPTH_MIN <= depth <= CUSTOM_MINIMAX_DEPTH_MAX:
+            raise ValueError("Connect Four custom minimax_depth must be between 1 and 6")
+        return {"minimax_depth": depth}
     def __init__(self):
         self.win_streak = 0
         self.best_streak = 0
@@ -279,15 +289,7 @@ class ConnectFourGame:
 
         custom_settings = {}
         if config.difficulty == "custom":
-            depth = config.custom_settings.get("minimax_depth")
-            if isinstance(depth, bool) or not isinstance(depth, int):
-                raise ValueError("Connect Four custom minimax_depth must be an integer")
-            if not CUSTOM_MINIMAX_DEPTH_MIN <= depth <= CUSTOM_MINIMAX_DEPTH_MAX:
-                raise ValueError(
-                    f"Connect Four custom minimax_depth must be between "
-                    f"{CUSTOM_MINIMAX_DEPTH_MIN} and {CUSTOM_MINIMAX_DEPTH_MAX}"
-                )
-            custom_settings["minimax_depth"] = depth
+            custom_settings = self.validate_custom_settings(config.custom_settings)
 
         player_mode = config.options.get("player_mode", "computer")
         if player_mode not in {"computer", "player"}:
@@ -380,6 +382,7 @@ class ConnectFourGame:
             outcome=outcome,
             difficulty=config.difficulty,
             mode=config.mode,
+            score=self._score(config.difficulty, outcome, custom_depth),
             moves=state.moves,
             metadata={
                 "configuration": configuration,
@@ -389,6 +392,14 @@ class ConnectFourGame:
             },
         )
         return self._finish_with_optional_replay(result, state)
+
+    @staticmethod
+    def _score(difficulty, outcome, custom_depth):
+        if outcome != "win":
+            return 0
+        if difficulty == "custom":
+            return min(custom_depth, 6)
+        return {"easy": 1, "medium": 2, "hard": 3}[difficulty]
 
     def _update_streak(self, config, player_mode, outcome):
         if not config.is_competitive or player_mode != "computer":
