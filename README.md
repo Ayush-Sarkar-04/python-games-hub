@@ -1,6 +1,6 @@
 # Python Games Hub
 
-A terminal-based Python Games Hub containing six independently runnable
+A terminal-based Python Games Hub containing seven independently runnable
 games, a shared session/configuration layer, standardized game state and
 results, persistent player systems, competitive statistics,
 achievements, progression, Quick Play, and configurable terminal
@@ -33,8 +33,11 @@ rules.
 -   **Snake** --- Real-time terminal gameplay with multiple speeds,
     keyboard controls, pause/quit, power-ups, wrap-around, score
     tracking, rematch, and top-run records.
+-   **Minesweeper** --- Easy/Medium/Hard boards, first-click safety,
+    mine detection, adjacent-mine counts, flood reveal, flagging,
+    scoring, practice mode, and standalone play.
 
-All six games are connected to the hub and remain independently
+All seven games are connected to the hub and remain independently
 runnable.
 
 ------------------------------------------------------------------------
@@ -63,7 +66,8 @@ python-games-hub/
 │   ├── rock_paper_scissors.py
 │   ├── hangman.py
 │   ├── word_scramble.py
-│   └── snake.py
+│   ├── snake.py
+│   └── minesweeper.py
 ├── tests/
 │   ├── test_games.py
 │   ├── test_game.py
@@ -204,6 +208,7 @@ The statistics layer supports:
 -   Word Scramble attempt records
 -   RPS variant/personality statistics
 -   Snake top runs
+-   Minesweeper scores and safe-cell records
 -   Cross-game aggregate progression data
 
 Practice sessions are excluded from competitive statistics.
@@ -223,6 +228,7 @@ Achievement examples include:
 -   Lizard-Spock RPS victory
 -   First-try Word Scramble
 -   Snake high-score milestones
+-   Minesweeper completion achievements
 -   Cross-game completion achievements
 
 Practice sessions cannot unlock competitive achievements.
@@ -291,7 +297,7 @@ The hub collects the custom value and passes it through `SessionConfig`.
 Each game validates its own custom parameter. Invalid values are
 rejected rather than silently clamped.
 
-Snake intentionally remains limited to its standard difficulty levels.
+Snake and Minesweeper intentionally remain limited to their standard difficulty levels.
 
 ------------------------------------------------------------------------
 
@@ -338,6 +344,17 @@ Difficulty controls game speed:
 -   **Easy** --- slower
 -   **Medium** --- standard
 -   **Hard** --- faster
+
+### Minesweeper
+
+Difficulty controls board size, mine count, and score multiplier:
+
+-   **Easy** --- 9 x 9 board with 10 mines
+-   **Medium** --- 16 x 16 board with 40 mines
+-   **Hard** --- 16 x 30 board with 99 mines
+
+The first reveal is always safe. Reveal safe cells, use flags to mark
+suspected mines, and clear every safe cell to win.
 
 ------------------------------------------------------------------------
 
@@ -417,6 +434,20 @@ Supports:
 -   Top-run statistics
 -   Rematch
 
+
+### Minesweeper
+
+Supports:
+
+-   Easy/Medium/Hard board sizes
+-   First-click mine safety
+-   Adjacent-mine counts
+-   Flood reveal for empty regions
+-   Flag / unflag actions
+-   Score based on safe cells revealed
+-   Competitive and Practice modes
+-   Standalone play with built-in instructions
+-   `r row column` to reveal, `f row column` to flag, `h` for help, and `q` to quit
 ------------------------------------------------------------------------
 
 ## Practice Mode
@@ -453,6 +484,7 @@ python games/hangman.py
 python games/rock_paper_scissors.py
 python games/word_scramble.py
 python games/snake.py
+python games/minesweeper.py
 ```
 
 ### Run the test suite
@@ -483,7 +515,7 @@ Coverage includes:
 -   Achievements
 -   Settings
 -   Hub flow
--   All six games
+-   All seven games
 -   Difficulty behavior
 -   Custom configuration bounds
 -   Practice-mode isolation
@@ -508,7 +540,7 @@ Coverage includes:
     interface.
 -   Keep the registry static and predictable.
 -   Prefer straightforward Python over unnecessary abstraction.
--   Keep all six games independently runnable.
+-   Keep all seven games independently runnable.
 -   Keep competitive progression aggregate and cosmetic-only.
 -   Keep Practice mode isolated from competitive records.
 -   Validate configuration at the appropriate layer rather than silently
