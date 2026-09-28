@@ -33,10 +33,14 @@ def _record_recent(stats, result):
 
 
 def _record_streak(stats, result):
-    stats["win_streak"] = result.metadata.get("win_streak", stats.get("win_streak", 0))
+    # Competitive wins build the streak; losses and draws break it.
+    if result.outcome == "win":
+        stats["win_streak"] = stats.get("win_streak", 0) + 1
+    else:
+        stats["win_streak"] = 0
     stats["best_streak"] = max(
         stats.get("best_streak", 0),
-        result.metadata.get("best_streak", 0),
+        stats["win_streak"],
     )
 
 
@@ -106,6 +110,13 @@ def update_statistics(statistics: dict[str, dict[str, Any]], result: GameResult)
             "outcome": result.outcome,
         })
         stats["top_runs"] = sorted(top_runs, key=lambda run: run["score"], reverse=True)[:5]
+
+    elif result.game == "minesweeper":
+        stats["games"] = stats.get("games", 0) + 1
+        _increment_outcome(stats, result.outcome)
+        stats["total_score"] = stats.get("total_score", 0) + (result.score or 0)
+        stats["best_score"] = max(stats.get("best_score", 0), result.score or 0)
+        _record_streak(stats, result)
 
     else:
         return statistics

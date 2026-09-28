@@ -1,17 +1,16 @@
 """Tic-Tac-Toe game implementation and V2 adapter.
 
-The legacy gameplay functions are retained so the game remains independently
-runnable. TicTacToeGame provides the V2 Game contract used by the hub.
+TicTacToeGame is the canonical implementation used by both the hub and standalone entry point.
 """
 
 import random
 from copy import deepcopy
 from time import sleep
-from typing import Callable
 
 from engine.game import SessionConfig
 from engine.result import GameResult
 from engine.state import GameState
+from engine.utils import choose_from_menu, play_again
 
 EASY = "1"
 MEDIUM = "2"
@@ -220,57 +219,16 @@ def display_result(message):
     print("=" * 42)
 
 
-def play_game(mode, difficulty=None, personality="Balanced"):
-    """Legacy standalone game loop retained for independent execution."""
-    board = [" "] * 9
-    player = "X"
-
-    for _ in range(9):
-        display_board(board)
-
-        if mode == "computer" and player == "O":
-            position = computer_move(board, difficulty, personality)
-            print(f"Computer chooses position {position + 1}.")
-        else:
-            position = get_player_move(board, player)
-
-        board[position] = player
-
-        if check_winner(board):
-            display_board(board)
-            if mode == "computer" and player == "O":
-                display_result("Computer wins!")
-                return "loss"
-            display_result(f"Player {player} wins!")
-            return "win"
-
-        player = "O" if player == "X" else "X"
-
-    display_board(board)
-    display_result("It's a draw!")
-    return "draw"
-
-
 def choose_difficulty():
-    while True:
-        print("\n" + "-" * 42)
-        print("              CHOOSE DIFFICULTY")
-        print("-" * 42)
-        print("1. Easy")
-        print("2. Medium")
-        print("3. Hard")
-        difficulty = input("\nChoose: ").strip()
-        if difficulty in (EASY, MEDIUM, HARD):
-            return difficulty
-        print("Invalid choice! Please choose 1, 2, or 3.")
-
-
-def play_again():
-    while True:
-        choice = input("\nPlay again? (y/n): ").strip().lower()
-        if choice in ("y", "n"):
-            return choice == "y"
-        print("Invalid input! Enter y or n.")
+    """Choose a standard difficulty for standalone execution."""
+    print("\nChoose Difficulty")
+    print("1. Easy")
+    print("2. Medium")
+    print("3. Hard")
+    return choose_from_menu(
+        "Choose difficulty: ",
+        {EASY, MEDIUM, HARD},
+    )
 
 
 def _hint_move(board, difficulty, personality, custom_depth=None):
@@ -498,9 +456,8 @@ class TicTacToeGame:
 
 
 def main(record_result=None):
-    """Legacy standalone entry point."""
-    win_streak = 0
-    best_streak = 0
+    """Standalone entry point using the canonical V2 game implementation."""
+    game = TicTacToeGame()
 
     while True:
         display_title()
@@ -509,36 +466,32 @@ def main(record_result=None):
         print("3. Exit")
         choice = input("\nChoose: ").strip()
 
+        if choice == "3":
+            print("\nThanks for playing Tic-Tac-Toe!")
+            break
+        if choice not in {"1", "2"}:
+            print("\nInvalid choice! Please choose 1, 2, or 3.")
+            continue
+
         if choice == "1":
             difficulty = choose_difficulty()
             personality = choose_personality()
+            options = {"player_mode": "computer", "personality": personality}
             print(f"\nYou are X. Computer is O. Personality: {personality}")
-            result = play_game("computer", difficulty, personality)
-
-            if result == "win":
-                win_streak += 1
-                best_streak = max(best_streak, win_streak)
-            elif result == "loss":
-                win_streak = 0
-
-            if record_result:
-                record_result("tic_tac_toe", result)
-
-            print(f"Win streak: {win_streak} | Best: {best_streak}")
-
-        elif choice == "2":
-            print("\nPlayer X goes first.")
-            result = play_game("player")
-            if record_result:
-                record_result("tic_tac_toe", result)
-
-        elif choice == "3":
-            print("\nThanks for playing Tic-Tac-Toe!")
-            break
-
         else:
-            print("\nInvalid choice! Please choose 1, 2, or 3.")
-            continue
+            difficulty = MEDIUM
+            options = {"player_mode": "player", "personality": "Balanced"}
+            print("\nPlayer X goes first.")
+
+        config = SessionConfig(
+            game="tic_tac_toe",
+            difficulty={EASY: "easy", MEDIUM: "medium", HARD: "hard"}[difficulty],
+            options=options,
+        )
+        result = game.play(game.setup(config), config)
+
+        if record_result:
+            record_result("tic_tac_toe", result.outcome)
 
         if not play_again():
             print("\nThanks for playing Tic-Tac-Toe!")

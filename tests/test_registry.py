@@ -4,6 +4,7 @@ from main import GAME_REGISTRY, build_session_config
 def test_registry_uses_stable_game_identifiers():
     assert "tic_tac_toe" in GAME_REGISTRY
     assert "connect_four" in GAME_REGISTRY
+    assert "minesweeper" in GAME_REGISTRY
     assert "1" not in GAME_REGISTRY
 
 
@@ -51,6 +52,7 @@ def test_registry_contains_all_game_classes():
         "RockPaperScissorsGame",
         "WordScrambleGame",
         "SnakeGame",
+        "MinesweeperGame",
     }
 
 
@@ -64,6 +66,7 @@ def test_all_registered_games_accept_hub_session_configuration():
         "rock_paper_scissors": {"variant": "standard", "match_type": "single", "rounds": 1},
         "word_scramble": {},
         "snake": {"wrap": False},
+        "minesweeper": {},
     }
     for game, definition in GAME_REGISTRY.items():
         config = build_session_config(game, "medium", options=options[game])
@@ -74,3 +77,7 @@ def test_all_registered_games_accept_hub_session_configuration():
         )
         state = instance.setup(config)
         assert state.game == game
+
+
+def test_registry_definitions_do_not_store_redundant_module_paths():
+    assert all(not hasattr(definition, "module") for definition in GAME_REGISTRY.values())

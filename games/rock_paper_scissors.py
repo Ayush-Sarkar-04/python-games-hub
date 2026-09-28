@@ -119,7 +119,7 @@ class RockPaperScissorsGame:
             if outcome == "win":
                 self.win_streak += 1
                 self.best_streak = max(self.best_streak, self.win_streak)
-            elif outcome == "loss":
+            else:
                 self.win_streak = 0
         print("\n" + "=" * 42)
         print("MATCH RESULT" if data["match_type"] == "match" else "GAME RESULT")
@@ -155,7 +155,7 @@ def main():
         if variant not in {"1", "2"}:
             print("Invalid choice!")
             continue
-        print("\n1. Single Game\n2. Best of...")
+        print("\n1. Single Game\n2. Fixed-Length Match")
         match_type = input("Choose: ").strip()
         if match_type not in {"1", "2"}:
             print("Invalid choice!")

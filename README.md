@@ -25,7 +25,7 @@ rules.
     Advanced custom attempt count, hints, ASCII stages, scoring,
     rematch, and streak tracking.
 -   **Rock Paper Scissors** --- Standard RPS or Lizard-Spock, single
-    games or best-of matches, computer personalities, history-based
+    games or fixed-length matches, computer personalities, history-based
     play, scoring, rematch, and streak tracking.
 -   **Word Scramble** --- API-backed word selection with local
     fallbacks, difficulty levels, hints, attempt-based scoring, rematch,
@@ -137,9 +137,11 @@ dynamic plugin discovery.
                 Profile / Summary / UI
 ```
 
-The game itself owns gameplay rules and mutable game state. The hub owns
-session configuration and the cross-game systems that consume completed
-results.
+The game itself owns gameplay rules and mutable game state. When a game is
+launched through the hub, the hub owns session configuration and the
+cross-game systems that consume completed results. Standalone game entry
+points may provide equivalent local configuration before creating the same
+`SessionConfig`.
 
 ------------------------------------------------------------------------
 
@@ -147,8 +149,9 @@ results.
 
 ### Session Configuration
 
-`SessionConfig` represents the configuration selected by the hub before
-a game starts.
+`SessionConfig` represents the configuration selected before a game starts.
+The Game Hub collects it centrally for hub-launched sessions; standalone
+game entry points may collect equivalent values locally.
 
 It contains:
 
@@ -159,7 +162,8 @@ It contains:
 -   Custom settings
 
 Games do not reopen the hub's configuration menus during their gameplay
-lifecycle.
+lifecycle. Standalone entry points may run their own configuration menus
+before constructing the session configuration.
 
 ### Game State
 
@@ -363,7 +367,7 @@ Supports:
 -   Standard RPS
 -   Lizard-Spock
 -   Single games
--   Best-of matches
+-   Fixed-length matches
 -   Difficulty-driven computer personalities
 -   Player history
 -   Scoring
@@ -495,7 +499,8 @@ Coverage includes:
 ## Design Principles
 
 -   Keep game rules inside their game modules.
--   Keep session configuration owned by the hub.
+-   Keep session configuration owned by the hub for hub-launched games;
+    standalone entry points may provide equivalent local configuration.
 -   Share only genuinely common session and infrastructure concerns.
 -   Record real committed moves, not AI simulations or speculative
     states.

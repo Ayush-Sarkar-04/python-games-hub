@@ -52,7 +52,6 @@ def test_choose_game_options_hangman(monkeypatch):
         GameDefinition(
             original.name,
             original.description,
-            original.module,
             FakeHangman,
             original.capabilities,
             original.modes,
@@ -150,3 +149,50 @@ def test_settings_menu_only_offers_unlocked_styles(tmp_path):
         input_func=lambda _: next(answers),
     )
     assert settings["banner_style"] == "default"
+
+
+def test_minesweeper_runs_through_hub_result_pipeline(tmp_path):
+    from main import build_session_config, launch_game, process_result
+    from engine.achievements import AchievementStore
+    from engine.profiles import ProfileStore
+    from engine.statistics import StatisticsStore
+    from games.minesweeper import MinesweeperGame
+
+    mines = {(0, 0), (8, 8), (0, 8), (8, 0), (4, 4), (2, 2), (6, 6), (1, 7), (7, 1), (4, 7)}
+    config = build_session_config(
+        "minesweeper",
+        "easy",
+        mode="competitive",
+        options={"mine_positions": mines},
+    )
+    assert config.game == "minesweeper"
+
+    state = MinesweeperGame().setup(config)
+    state.data["revealed"] = {
+        (row, column)
+        for row in range(9)
+        for column in range(9)
+        if (row, column) not in mines
+    }
+    state.data["first_move"] = False
+
+    original_play = MinesweeperGame.play
+    try:
+        MinesweeperGame.play = lambda self, current_state, current_config: self._finish(
+            current_state, current_config, "win"
+        )
+        result = launch_game("minesweeper", config)
+    finally:
+        MinesweeperGame.play = original_play
+
+    processed = process_result(
+        result,
+        profile_store=ProfileStore(tmp_path / "profile.json"),
+        statistics_store=StatisticsStore(tmp_path / "statistics.json"),
+        achievement_store=AchievementStore(tmp_path / "achievements.json"),
+    )
+
+    assert result.game == "minesweeper"
+    assert result.outcome == "win"
+    assert processed["statistics"]["minesweeper"]["wins"] == 1
+    assert processed["profile"].xp == 2

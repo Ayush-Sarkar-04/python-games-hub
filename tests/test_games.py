@@ -256,6 +256,26 @@ def test_connect_four_practice_does_not_change_streak(monkeypatch):
     game.play(state, config)
     assert game.win_streak == 0
     assert game.best_streak == 0
+def test_rps_draw_breaks_competitive_streak():
+    from games.rock_paper_scissors import RockPaperScissorsGame
+
+    game = RockPaperScissorsGame()
+    config = SessionConfig(
+        game="rock_paper_scissors",
+        difficulty="easy",
+        mode="competitive",
+        options={"variant": "standard", "match_type": "single", "rounds": 1},
+    )
+    state = game.setup(config)
+
+    game.win_streak = 3
+    game.best_streak = 3
+    game._finish(state, config, "draw")
+
+    assert game.win_streak == 0
+    assert game.best_streak == 3
+
+
 def test_hangman_setup_uses_config_and_returns_state():
     words = {"animals": {"name": "Animals", "words": ["cat", "tiger", "elephant"]}}
     game = HangmanGame(words)
@@ -494,3 +514,199 @@ def test_connect_four_custom_setup_preserves_custom_configuration():
     )
     state = ConnectFourGame().setup(config)
     assert state.data["custom_settings"] == {"minimax_depth": 6}
+
+def test_tic_tac_toe_standalone_difficulty_menu_shows_options(monkeypatch, capsys):
+    from games import tic_tac_toe
+
+    monkeypatch.setattr(
+        tic_tac_toe,
+        "choose_from_menu",
+        lambda prompt, options: "1",
+    )
+
+    assert tic_tac_toe.choose_difficulty() == "1"
+    output = capsys.readouterr().out
+    assert "1. Easy" in output
+    assert "2. Medium" in output
+    assert "3. Hard" in output
+
+
+
+def test_minesweeper_display_explains_controls_and_coordinates(capsys):
+    from games.minesweeper import MinesweeperGame, display_board, display_instructions
+
+    config = SessionConfig(game="minesweeper", difficulty="easy", mode="practice")
+    state = MinesweeperGame().setup(config)
+
+    display_instructions()
+    display_board(state)
+    output = capsys.readouterr().out
+
+    assert "HOW TO PLAY" in output
+    assert "reveal every safe cell" in output
+    assert "Numbers show how many mines touch that cell" in output
+    assert "## = hidden" in output
+    assert "r row column" in output
+    assert "f row column" in output
+    assert "h              Show these instructions again" in output
+    assert "q              Quit the game" in output
+    assert "01 02 03 04 05 06 07 08 09" in output
+    assert "01 |" in output
+
+
+def test_minesweeper_help_command_is_available(monkeypatch, capsys):
+    from games.minesweeper import MinesweeperGame
+
+    config = SessionConfig(game="minesweeper", difficulty="easy", mode="practice")
+    state = MinesweeperGame().setup(config)
+    answers = iter(["h", "q"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+
+    result = MinesweeperGame().play(state, config)
+
+    output = capsys.readouterr().out
+    assert result.outcome == "quit"
+    assert output.count("HOW TO PLAY") >= 2
+
+
+def test_minesweeper_accepts_full_word_commands(monkeypatch):
+    from games.minesweeper import MinesweeperGame
+
+    config = SessionConfig(
+        game="minesweeper",
+        difficulty="easy",
+        mode="practice",
+        options={"mine_positions": {(0, 0), (8, 8), (0, 8), (8, 0), (4, 4), (2, 2), (6, 6), (1, 7), (7, 1), (4, 7)}},
+    )
+    state = MinesweeperGame().setup(config)
+    answers = iter(["reveal 1 2", "quit"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+
+    result = MinesweeperGame().play(state, config)
+
+    assert result.outcome == "quit"
+    assert (0, 1) in state.data["revealed"]
+
+
+def test_minesweeper_setup_and_difficulty_dimensions():
+    from games.minesweeper import DIFFICULTIES, MinesweeperGame
+
+    for difficulty, settings in DIFFICULTIES.items():
+        state = MinesweeperGame().setup(
+            SessionConfig(game="minesweeper", difficulty=difficulty, mode="practice")
+        )
+        assert state.game == "minesweeper"
+        assert state.data["rows"] == settings["rows"]
+        assert state.data["columns"] == settings["columns"]
+        assert state.data["mine_count"] == settings["mines"]
+        assert state.data["mines"] == set()
+        assert state.data["revealed"] == set()
+        assert state.data["flagged"] == set()
+
+
+def test_minesweeper_adjacent_counts_and_flood_reveal():
+    from games.minesweeper import MinesweeperGame, board_complete, reveal_cells
+
+    config = SessionConfig(
+        game="minesweeper",
+        difficulty="easy",
+        mode="practice",
+        options={"mine_positions": {(0, 0), (8, 8), (0, 8), (8, 0), (4, 4), (2, 2), (6, 6), (1, 7), (7, 1), (4, 7)}},
+    )
+    game = MinesweeperGame()
+    state = game.setup(config)
+
+    assert state.data["counts"][(4, 5)] == 1
+    revealed = reveal_cells(state, (3, 3))
+    assert revealed
+    assert (3, 3) in state.data["revealed"]
+    assert not board_complete(state)
+
+
+def test_minesweeper_flag_and_reveal_rules():
+    from games.minesweeper import MinesweeperGame
+
+    config = SessionConfig(
+        game="minesweeper",
+        difficulty="easy",
+        mode="practice",
+        options={"mine_positions": {(0, 0), (8, 8), (0, 8), (8, 0), (4, 4), (2, 2), (6, 6), (1, 7), (7, 1), (4, 7)}},
+    )
+    game = MinesweeperGame()
+    state = game.setup(config)
+    state.data["flagged"].add((0, 0))
+    result = game._finish(state, config, "quit")
+    assert result.outcome == "quit"
+    assert result.metadata["flags"] == 1
+
+
+def test_minesweeper_loss_and_result_metadata():
+    from games.minesweeper import MinesweeperGame
+
+    config = SessionConfig(
+        game="minesweeper",
+        difficulty="easy",
+        mode="competitive",
+        options={"mine_positions": {(0, 0), (8, 8), (0, 8), (8, 0), (4, 4), (2, 2), (6, 6), (1, 7), (7, 1), (4, 7)}},
+    )
+    game = MinesweeperGame()
+    state = game.setup(config)
+    state.data["first_move"] = False
+    state.record_move({"action": "reveal", "cell": (0, 0)})
+    state.data["revealed"].add((0, 0))
+    result = game._finish(state, config, "loss")
+    assert isinstance(result, GameResult)
+    assert result.outcome == "loss"
+    assert result.moves == 1
+    assert result.metadata["mines"] == 10
+    assert result.metadata["configuration"] == {"rows": 9, "columns": 9}
+
+
+def test_minesweeper_win_records_score_and_moves():
+    from games.minesweeper import MinesweeperGame
+
+    config = SessionConfig(
+        game="minesweeper",
+        difficulty="easy",
+        mode="competitive",
+        options={"mine_positions": {(0, 0), (8, 8), (0, 8), (8, 0), (4, 4), (2, 2), (6, 6), (1, 7), (7, 1), (4, 7)}},
+    )
+    game = MinesweeperGame()
+    state = game.setup(config)
+    state.data["revealed"] = {
+        (row, column)
+        for row in range(9)
+        for column in range(9)
+        if (row, column) not in state.data["mines"]
+    }
+    state.record_move({"action": "reveal", "cell": (0, 1)})
+    result = game._finish(state, config, "win")
+    assert result.outcome == "win"
+    assert result.score == 71
+    assert result.moves == 1
+
+
+def test_minesweeper_play_can_complete_a_deterministic_board(monkeypatch):
+    from games.minesweeper import MinesweeperGame
+
+    mines = {
+        (0, 0), (0, 1), (0, 2), (0, 3), (0, 4),
+        (1, 0), (1, 1), (1, 2), (1, 3), (1, 4),
+    }
+    config = SessionConfig(
+        game="minesweeper",
+        difficulty="easy",
+        mode="competitive",
+        options={"mine_positions": mines},
+    )
+    game = MinesweeperGame()
+    state = game.setup(config)
+    answers = iter(["r 9 9"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+
+    result = game.play(state, config)
+
+    assert result.outcome == "win"
+    assert result.score == 71
+    assert result.moves == 1
+    assert result.metadata["safe_cells_revealed"] == 71

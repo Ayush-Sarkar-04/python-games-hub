@@ -103,7 +103,10 @@ def test_connect_four_achievement_evaluator_accepts_competitive_result():
         mode="competitive",
         metadata={"win_streak": 10, "configuration": {"custom_settings": {"minimax_depth": 6}}},
     )
-    assert set(BOARD_GAME_ACHIEVEMENT_EVALUATOR.evaluate(result)) == {
+    assert set(BOARD_GAME_ACHIEVEMENT_EVALUATOR.evaluate(
+        result,
+        context={"win_streak": 10},
+    )) == {
         "first_victory",
         "connect_four_10_win_streak",
     }
@@ -156,8 +159,8 @@ def test_commit3_statistics_aggregate_competitive_results_only():
 
     assert statistics["rock_paper_scissors"]["matches"] == 1
     assert statistics["rock_paper_scissors"]["wins"] == 1
-    assert statistics["rock_paper_scissors"]["win_streak"] == 2
-    assert statistics["rock_paper_scissors"]["best_streak"] == 4
+    assert statistics["rock_paper_scissors"]["win_streak"] == 1
+    assert statistics["rock_paper_scissors"]["best_streak"] == 1
     assert statistics["rock_paper_scissors"]["results_by_personality"] == {
         "unpredictable": {"wins": 1},
     }
@@ -271,6 +274,41 @@ def test_commit3_achievements_exclude_practice_results():
     assert NON_REAL_TIME_ACHIEVEMENT_EVALUATOR.evaluate(result) == []
 
 
+
+def test_statistics_streaks_accumulate_from_persisted_statistics(tmp_path):
+    from engine.result import GameResult
+    from engine.statistics import StatisticsStore, update_statistics
+
+    store = StatisticsStore(tmp_path / "statistics.json")
+    result = GameResult(
+        game="connect_four",
+        outcome="win",
+        difficulty="hard",
+        mode="competitive",
+        metadata={"win_streak": 1, "best_streak": 1},
+    )
+
+    for expected_streak in range(1, 6):
+        statistics = update_statistics(store.load(), result)
+        store.save(statistics)
+        persisted = store.load()
+        assert persisted["connect_four"]["win_streak"] == expected_streak
+        assert persisted["connect_four"]["best_streak"] == expected_streak
+
+    loss = GameResult(
+        game="connect_four",
+        outcome="loss",
+        difficulty="hard",
+        mode="competitive",
+        metadata={"win_streak": 1, "best_streak": 1},
+    )
+    statistics = update_statistics(store.load(), loss)
+    store.save(statistics)
+    persisted = store.load()
+
+    assert persisted["connect_four"]["win_streak"] == 0
+    assert persisted["connect_four"]["best_streak"] == 5
+
 def test_statistics_cover_board_games_and_snake():
     from engine.result import GameResult
     from engine.statistics import update_statistics
@@ -349,7 +387,40 @@ def test_achievement_unlock_persists(tmp_path):
     assert store.load()["snake_200"]["unlocked"] is True
 
 
-def test_all_six_achievement_uses_competitive_history():
+def test_connect_four_10_win_streak_uses_persisted_statistics(tmp_path):
+    from engine.achievements import AchievementStore
+    from engine.result import GameResult
+    from engine.statistics import StatisticsStore
+    from main import process_result
+
+    statistics_store = StatisticsStore(tmp_path / "statistics.json")
+    achievement_store = AchievementStore(tmp_path / "achievements.json")
+    result = GameResult(
+        game="connect_four",
+        outcome="win",
+        difficulty="hard",
+        mode="competitive",
+        metadata={"win_streak": 1},
+    )
+
+    earned_by_win = []
+    for _ in range(10):
+        earned_by_win.append(
+            process_result(
+                result,
+                statistics_store=statistics_store,
+                achievement_store=achievement_store,
+            )["achievements"]
+        )
+
+    assert "connect_four_10_win_streak" not in earned_by_win[0]
+    assert "connect_four_10_win_streak" not in earned_by_win[8]
+    assert "connect_four_10_win_streak" in earned_by_win[9]
+    assert statistics_store.load()["connect_four"]["win_streak"] == 10
+    assert achievement_store.load()["connect_four_10_win_streak"]["unlocked"] is True
+
+
+def test_all_seven_achievement_uses_competitive_history_from_seven_games():
     from engine.achievements import ALL_ACHIEVEMENT_EVALUATOR
     from engine.result import GameResult
 
@@ -360,11 +431,11 @@ def test_all_six_achievement_uses_competitive_history():
         mode="competitive",
         score=10,
     )
-    assert "all_six_games" in ALL_ACHIEVEMENT_EVALUATOR.evaluate(
+    assert "all_seven_games" in ALL_ACHIEVEMENT_EVALUATOR.evaluate(
         result,
         context={"games_played": {
             "tic_tac_toe", "connect_four", "hangman",
-            "rock_paper_scissors", "word_scramble", "snake"
+            "rock_paper_scissors", "word_scramble", "snake", "minesweeper"
         }},
     )
 
@@ -394,3 +465,47 @@ def test_settings_store_rejects_unknown_banner_style(tmp_path):
         "banner_style": "default",
         "auto_suggest_difficulty": False,
     }
+
+
+def test_minesweeper_statistics_and_profile_integration():
+    from engine.result import GameResult
+    from engine.statistics import update_statistics
+
+    statistics = update_statistics(
+        {},
+        GameResult(
+            game="minesweeper",
+            outcome="win",
+            difficulty="hard",
+            mode="competitive",
+            score=213,
+            moves=18,
+            metadata={"mines": 99, "flags": 12, "safe_cells_revealed": 381},
+        ),
+    )
+
+    assert statistics["minesweeper"]["games"] == 1
+    assert statistics["minesweeper"]["wins"] == 1
+    assert statistics["minesweeper"]["best_score"] == 213
+    assert statistics["minesweeper"]["total_score"] == 213
+    assert statistics["minesweeper"]["win_streak"] == 1
+
+
+def test_all_seven_achievement_uses_competitive_history():
+    from engine.achievements import ALL_ACHIEVEMENT_EVALUATOR
+    from engine.result import GameResult
+
+    result = GameResult(
+        game="minesweeper",
+        outcome="win",
+        difficulty="medium",
+        mode="competitive",
+        score=50,
+    )
+    assert "all_seven_games" in ALL_ACHIEVEMENT_EVALUATOR.evaluate(
+        result,
+        context={"games_played": {
+            "tic_tac_toe", "connect_four", "hangman",
+            "rock_paper_scissors", "word_scramble", "snake", "minesweeper"
+        }},
+    )

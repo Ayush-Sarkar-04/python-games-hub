@@ -16,6 +16,7 @@ from games.hangman import HangmanGame
 from games.rock_paper_scissors import RockPaperScissorsGame
 from games.word_scramble import WordScrambleGame
 from games.snake import SnakeGame
+from games.minesweeper import MinesweeperGame
 
 
 DATA_DIR = Path(".game_data")
@@ -26,7 +27,6 @@ EXPORT_PATH = Path("player_summary.md")
 class GameDefinition:
     name: str
     description: str
-    module: str
     game_class: type
     capabilities: frozenset[str]
     modes: frozenset[str]
@@ -37,7 +37,7 @@ class GameDefinition:
 
 GAME_REGISTRY = {
     "tic_tac_toe": GameDefinition(
-        "Tic-Tac-Toe", "Classic 3x3 strategy game", "games.tic_tac_toe",
+        "Tic-Tac-Toe", "Classic 3x3 strategy game",
         TicTacToeGame,
         frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
@@ -45,7 +45,7 @@ GAME_REGISTRY = {
         tuple((key, *values) for key, values in TicTacToeGame.CUSTOM_PARAMETERS.items()),
     ),
     "hangman": GameDefinition(
-        "Hangman", "Guess the hidden word before you run out of attempts", "games.hangman",
+        "Hangman", "Guess the hidden word before you run out of attempts",
         HangmanGame,
         frozenset({"hint", "practice", "custom_difficulty"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
@@ -53,20 +53,20 @@ GAME_REGISTRY = {
         tuple((key, *values) for key, values in HangmanGame.CUSTOM_PARAMETERS.items()),
     ),
     "rock_paper_scissors": GameDefinition(
-        "Rock Paper Scissors", "Classic RPS with optional Lizard & Spock", "games.rock_paper_scissors",
+        "Rock Paper Scissors", "Classic RPS with optional Lizard & Spock",
         RockPaperScissorsGame,
         frozenset({"history", "practice"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
         frozenset({"variant", "match_type", "rounds"}),
     ),
     "word_scramble": GameDefinition(
-        "Word Scramble", "Unscramble words across multiple difficulty levels", "games.word_scramble",
+        "Word Scramble", "Unscramble words across multiple difficulty levels",
         WordScrambleGame,
         frozenset({"hint", "practice"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
     ),
     "connect_four": GameDefinition(
-        "Connect Four", "Connect four pieces before your opponent", "games.connect_four",
+        "Connect Four", "Connect four pieces before your opponent",
         ConnectFourGame,
         frozenset({"replay", "history", "hint", "practice", "custom_difficulty"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
@@ -74,11 +74,17 @@ GAME_REGISTRY = {
         tuple((key, *values) for key, values in ConnectFourGame.CUSTOM_PARAMETERS.items()),
     ),
     "snake": GameDefinition(
-        "Snake", "Classic terminal Snake with score-based play", "games.snake",
+        "Snake", "Classic terminal Snake with score-based play",
         SnakeGame,
         frozenset({"run_history", "practice"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
         frozenset({"wrap"}),
+    ),
+    "minesweeper": GameDefinition(
+        "Minesweeper", "Reveal safe cells, flag mines, and clear the board",
+        MinesweeperGame,
+        frozenset({"practice"}),
+        frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
     ),
 }
 
@@ -270,7 +276,7 @@ def choose_game_options(game: str, *, input_func=input) -> dict:
 
         print("\nMatch Type")
         print("1. Single Game")
-        print("2. Best of...")
+        print("2. Fixed-Length Match")
         match_choice = choose_from_menu("Choose: ", {"1", "2"}, input_func=input_func)
         rounds = 1
         if match_choice == "2":

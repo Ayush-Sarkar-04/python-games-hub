@@ -70,11 +70,14 @@ BOARD_GAME_ACHIEVEMENT_DEFINITIONS = (
 
 BOARD_GAME_ACHIEVEMENT_RULES = {
     "first_victory": lambda result: result.mode == "competitive" and result.outcome == "win",
-    "connect_four_10_win_streak": lambda result: (
+}
+
+BOARD_GAME_ACHIEVEMENT_CONTEXT_RULES = {
+    "connect_four_10_win_streak": lambda result, context: (
         result.game == "connect_four"
         and result.mode == "competitive"
         and result.outcome == "win"
-        and result.metadata.get("win_streak", 0) >= 10
+        and context.get("win_streak", 0) >= 10
     ),
 }
 
@@ -102,7 +105,7 @@ NON_REAL_TIME_ACHIEVEMENT_RULES = {
 
 PROGRESSION_ACHIEVEMENT_DEFINITIONS = (
     AchievementDefinition("snake_200", "Snake 200", "Score more than 200 in a competitive Snake run."),
-    AchievementDefinition("all_six_games", "Full House", "Play all six games in competitive sessions."),
+    AchievementDefinition("all_seven_games", "Full House", "Play all seven games in competitive sessions."),
 )
 
 PROGRESSION_ACHIEVEMENT_RULES = {
@@ -113,9 +116,9 @@ PROGRESSION_ACHIEVEMENT_RULES = {
 }
 
 PROGRESSION_ACHIEVEMENT_CONTEXT_RULES = {
-    "all_six_games": lambda result, context: (
+    "all_seven_games": lambda result, context: (
         result.mode == "competitive"
-        and len(context.get("games_played", set())) >= 6
+        and len(context.get("games_played", set())) >= 7
     ),
 }
 
@@ -129,10 +132,15 @@ ALL_ACHIEVEMENT_RULES = {
     **NON_REAL_TIME_ACHIEVEMENT_RULES,
     **PROGRESSION_ACHIEVEMENT_RULES,
 }
-ALL_ACHIEVEMENT_CONTEXT_RULES = PROGRESSION_ACHIEVEMENT_CONTEXT_RULES
+ALL_ACHIEVEMENT_CONTEXT_RULES = {
+    **BOARD_GAME_ACHIEVEMENT_CONTEXT_RULES,
+    **PROGRESSION_ACHIEVEMENT_CONTEXT_RULES,
+}
 
 BOARD_GAME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
-    BOARD_GAME_ACHIEVEMENT_DEFINITIONS, BOARD_GAME_ACHIEVEMENT_RULES
+    BOARD_GAME_ACHIEVEMENT_DEFINITIONS,
+    BOARD_GAME_ACHIEVEMENT_RULES,
+    BOARD_GAME_ACHIEVEMENT_CONTEXT_RULES,
 )
 NON_REAL_TIME_ACHIEVEMENT_EVALUATOR = AchievementEvaluator(
     NON_REAL_TIME_ACHIEVEMENT_DEFINITIONS, NON_REAL_TIME_ACHIEVEMENT_RULES
@@ -175,7 +183,10 @@ def unlock_achievements(
     earned = ALL_ACHIEVEMENT_EVALUATOR.evaluate(
         result,
         unlocked,
-        {"games_played": set(statistics)},
+        {
+            "games_played": set(statistics),
+            "win_streak": statistics.get(result.game, {}).get("win_streak", 0),
+        },
     )
     timestamp = datetime.now(timezone.utc).isoformat()
     for achievement_id in earned:
