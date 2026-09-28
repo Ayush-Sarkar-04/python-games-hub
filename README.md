@@ -1,48 +1,46 @@
 # Python Games Hub
 
-A terminal-based Python Games Hub containing seven independently runnable
-games, a shared session/configuration layer, standardized game state and
-results, persistent player systems, competitive statistics,
-achievements, progression, Quick Play, and configurable terminal
-presentation.
+A complete terminal-based Python game platform containing seven independently
+runnable games, a shared session/configuration layer, standardized game state
+and results, persistent player systems, competitive statistics, achievements,
+progression, Quick Play, and configurable terminal presentation.
 
-The project is intentionally built with straightforward Python and
-standard-library components where possible. The hub owns session-level
-configuration and shared systems, while each game owns its gameplay
-rules.
+The project is designed as one coherent product: each game keeps its own rules
+and personality while the platform provides the common systems that make the
+collection consistent, testable, and persistent.
+
+The implementation favors straightforward Python and standard-library
+components at runtime. Shared infrastructure is centralized where it genuinely
+belongs, while game-specific mechanics remain inside their own modules.
 
 ## Games
 
--   **Tic-Tac-Toe** --- Player vs Computer or Player vs Player,
-    Easy/Medium/Hard, Advanced custom minimax depth, computer
-    personalities, minimax AI, hints, replay, rematch, scoring, and win
-    streaks.
--   **Connect Four** --- Player vs Computer or Player vs Player,
-    Easy/Medium/Hard, Advanced custom minimax depth, gravity, win
-    detection, minimax AI, hints, replay, rematch, scoring, and win
-    streaks.
--   **Hangman** --- Category-based word selection, Easy/Medium/Hard,
-    Advanced custom attempt count, hints, ASCII stages, scoring,
-    rematch, and streak tracking.
--   **Rock Paper Scissors** --- Standard RPS or Lizard-Spock, single
-    games or fixed-length matches, computer personalities, history-based
-    play, scoring, rematch, and streak tracking.
--   **Word Scramble** --- API-backed word selection with local
-    fallbacks, difficulty levels, hints, attempt-based scoring, rematch,
-    and streak tracking.
--   **Snake** --- Real-time terminal gameplay with multiple speeds,
-    keyboard controls, pause/quit, power-ups, wrap-around, score
-    tracking, rematch, and top-run records.
--   **Minesweeper** --- Easy/Medium/Hard boards, first-click safety,
-    mine detection, adjacent-mine counts, flood reveal, flagging,
-    scoring, practice mode, and standalone play.
+- **Tic-Tac-Toe** — Player vs Computer or Player vs Player, Easy/Medium/Hard,
+  Advanced custom minimax depth, computer personalities, minimax AI, hints,
+  replay, rematch, scoring, and win streaks.
+- **Connect Four** — Player vs Computer or Player vs Player, Easy/Medium/Hard,
+  Advanced custom minimax depth, gravity, win detection, minimax AI, hints,
+  replay, rematch, scoring, and win streaks.
+- **Hangman** — Category-based word selection, Easy/Medium/Hard, Advanced
+  custom attempt count, hints, ASCII stages, scoring, rematch, and streak
+  tracking.
+- **Rock Paper Scissors** — Standard RPS or Lizard-Spock, single games or
+  fixed-length matches, computer personalities, history-based play, scoring,
+  rematch, and streak tracking.
+- **Word Scramble** — API-backed word selection with local fallbacks, difficulty
+  levels, hints, attempt-based scoring, rematch, and streak tracking.
+- **Snake** — Real-time terminal gameplay with multiple speeds, keyboard
+  controls, pause/quit, power-ups, wrap-around, score tracking, rematch, and
+  top-run records.
+- **Minesweeper** — Hidden-mine grid, first-click safety, safe-cell reveals,
+  flood reveal, flagging, difficulty-based boards, scoring, and win/loss
+  detection.
 
-All seven games are connected to the hub and remain independently
-runnable.
+All seven games are connected to the hub and remain independently runnable.
 
 ------------------------------------------------------------------------
 
-## V2 Architecture
+## Architecture
 
 ``` text
 python-games-hub/
@@ -66,8 +64,7 @@ python-games-hub/
 │   ├── rock_paper_scissors.py
 │   ├── hangman.py
 │   ├── word_scramble.py
-│   ├── snake.py
-│   └── minesweeper.py
+│   └── snake.py
 ├── tests/
 │   ├── test_games.py
 │   ├── test_game.py
@@ -208,7 +205,6 @@ The statistics layer supports:
 -   Word Scramble attempt records
 -   RPS variant/personality statistics
 -   Snake top runs
--   Minesweeper scores and safe-cell records
 -   Cross-game aggregate progression data
 
 Practice sessions are excluded from competitive statistics.
@@ -228,7 +224,6 @@ Achievement examples include:
 -   Lizard-Spock RPS victory
 -   First-try Word Scramble
 -   Snake high-score milestones
--   Minesweeper completion achievements
 -   Cross-game completion achievements
 
 Practice sessions cannot unlock competitive achievements.
@@ -297,7 +292,7 @@ The hub collects the custom value and passes it through `SessionConfig`.
 Each game validates its own custom parameter. Invalid values are
 rejected rather than silently clamped.
 
-Snake and Minesweeper intentionally remain limited to their standard difficulty levels.
+Snake intentionally remains limited to its standard difficulty levels.
 
 ------------------------------------------------------------------------
 
@@ -344,17 +339,6 @@ Difficulty controls game speed:
 -   **Easy** --- slower
 -   **Medium** --- standard
 -   **Hard** --- faster
-
-### Minesweeper
-
-Difficulty controls board size, mine count, and score multiplier:
-
--   **Easy** --- 9 x 9 board with 10 mines
--   **Medium** --- 16 x 16 board with 40 mines
--   **Hard** --- 16 x 30 board with 99 mines
-
-The first reveal is always safe. Reveal safe cells, use flags to mark
-suspected mines, and clear every safe cell to win.
 
 ------------------------------------------------------------------------
 
@@ -434,20 +418,53 @@ Supports:
 -   Top-run statistics
 -   Rematch
 
+------------------------------------------------------------------------
 
-### Minesweeper
+## Minesweeper
 
-Supports:
+Minesweeper adds a hidden-state grid game to the platform while using the same
+session, result, statistics, achievement, progression, and persistence
+systems as the other games.
 
--   Easy/Medium/Hard board sizes
--   First-click mine safety
--   Adjacent-mine counts
--   Flood reveal for empty regions
--   Flag / unflag actions
--   Score based on safe cells revealed
--   Competitive and Practice modes
--   Standalone play with built-in instructions
--   `r row column` to reveal, `f row column` to flag, `h` for help, and `q` to quit
+### Difficulty
+
+| Difficulty | Board | Mines |
+|---|---:|---:|
+| Easy | 9 x 9 | 10 |
+| Medium | 16 x 16 | 40 |
+| Hard | 16 x 30 | 99 |
+
+The first reveal is safe. Revealed numbers show how many mines are present in
+the surrounding cells, and empty areas can be opened through flood reveal.
+
+### Commands
+
+```text
+r ROW COL    Reveal a cell
+f ROW COL    Flag / unflag a cell
+h            Show help
+q            Quit
+```
+
+The game displays row and column coordinates, explains its symbols and
+commands in-game, and can be played without external instructions.
+
+Minesweeper returns the same `GameResult` contract used by the other games and
+participates in the normal platform flow:
+
+```text
+Minesweeper
+    ↓
+GameResult
+    ↓
+Statistics / Achievements / Progression
+    ↓
+Persistence
+```
+
+Its addition also validates that a genuinely different game can be registered
+and integrated without creating a separate hub architecture.
+
 ------------------------------------------------------------------------
 
 ## Practice Mode
@@ -499,6 +516,8 @@ consistently for test execution.
 ------------------------------------------------------------------------
 
 ## Testing
+
+The current regression suite contains **119 passing tests** covering the games, shared engine, hub flow, persistence, and cross-system integration.
 
 The project has a centralized game test suite plus separate tests for
 the shared engine and infrastructure.
@@ -555,4 +574,4 @@ The project is a Python terminal game platform.
 
 The focus is a maintainable, testable terminal game hub that
 demonstrates clean Python architecture while preserving the individual
-character of the original games.
+character of the games.
