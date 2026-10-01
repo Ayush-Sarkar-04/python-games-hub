@@ -9,7 +9,6 @@ st.set_page_config(
     page_title="Python Games Hub",
     page_icon="🎮",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
 
@@ -30,38 +29,47 @@ def home() -> None:
 
     st.markdown("## Game Hub")
     cols = st.columns(3)
+
     for index, (name, description, status) in enumerate(GAMES):
         with cols[index % 3]:
             with st.container(border=True):
                 st.subheader(name)
                 st.write(description)
+
                 if status == "Available":
-                    if st.button("Play", key=f"play_{index}", use_container_width=True):
+                    if st.button(
+                        "Play",
+                        key=f"play_{index}",
+                        use_container_width=True,
+                    ):
                         st.session_state["page"] = name
                         st.rerun()
                 else:
                     st.caption(status)
 
 
+def tic_tac_toe_page() -> None:
+    top_left, top_right = st.columns([1, 5])
+
+    with top_left:
+        if st.button("← Back to Games", use_container_width=True):
+            st.session_state["page"] = "Home"
+            st.rerun()
+
+    with top_right:
+        if st.button("New Game", use_container_width=True):
+            reset_ttt()
+            st.rerun()
+
+    render_ttt()
+
+
 def main() -> None:
     if "page" not in st.session_state:
         st.session_state["page"] = "Home"
 
-    with st.sidebar:
-        st.title("Games Hub")
-        page = st.radio(
-            "Navigate",
-            ["Home", "Tic-Tac-Toe"],
-            index=["Home", "Tic-Tac-Toe"].index(st.session_state["page"]),
-        )
-        st.session_state["page"] = page
-
-        if page == "Tic-Tac-Toe" and st.button("New Game", use_container_width=True):
-            reset_ttt()
-            st.rerun()
-
     if st.session_state["page"] == "Tic-Tac-Toe":
-        render_ttt()
+        tic_tac_toe_page()
     else:
         home()
 
