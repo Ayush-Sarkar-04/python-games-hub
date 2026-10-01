@@ -49,20 +49,28 @@ def home() -> None:
 
 
 def tic_tac_toe_page() -> None:
-    top_left, top_right = st.columns([1, 5])
+    game = st.session_state.get("ttt", {})
+    screen = game.get("screen", "setup")
 
-    with top_left:
+    if screen == "game":
+        top_left, top_right = st.columns([1, 5])
+
+        with top_left:
+            if st.button("← Back to Games", use_container_width=True):
+                st.session_state["page"] = "Home"
+                st.rerun()
+
+        with top_right:
+            if st.button(
+                "New Game",
+                key="ttt_page_new_game",
+                use_container_width=True,
+            ):
+                new_game()
+                st.rerun()
+    else:
         if st.button("← Back to Games", use_container_width=True):
             st.session_state["page"] = "Home"
-            st.rerun()
-
-    with top_right:
-        if st.button(
-            "New Game",
-            key="ttt_page_new_game",
-            use_container_width=True,
-        ):
-            new_game()
             st.rerun()
 
     render_ttt()
