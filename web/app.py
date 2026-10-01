@@ -1,6 +1,15 @@
 """Streamlit entry point for Python Games Hub Web V2."""
 
+import sys
+from pathlib import Path
+
 import streamlit as st
+
+# Streamlit Cloud can execute web/app.py with only the web/ directory on sys.path.
+# Add the repository root so both web.* and games.* imports resolve correctly.
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from web.games.tic_tac_toe import new_game, render_ttt
 
