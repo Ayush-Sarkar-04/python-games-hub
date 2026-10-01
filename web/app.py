@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from web.games.tic_tac_toe import reset_ttt, render_ttt
+from web.games.tic_tac_toe import new_game, render_ttt
 
 
 st.set_page_config(
@@ -57,8 +57,12 @@ def tic_tac_toe_page() -> None:
             st.rerun()
 
     with top_right:
-        if st.button("New Game", use_container_width=True):
-            reset_ttt()
+        if st.button(
+            "New Game",
+            key="ttt_page_new_game",
+            use_container_width=True,
+        ):
+            new_game()
             st.rerun()
 
     render_ttt()
