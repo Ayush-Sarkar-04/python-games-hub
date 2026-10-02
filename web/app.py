@@ -11,6 +11,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from web.games.connect_four import new_game as new_connect_four_game
+from web.games.connect_four import render_connect_four
 from web.games.tic_tac_toe import new_game, render_ttt
 
 
@@ -23,7 +25,7 @@ st.set_page_config(
 
 GAMES = [
     ("Tic-Tac-Toe", "Classic 3x3 strategy game", "Available"),
-    ("Connect Four", "Connect four pieces before your opponent", "Coming next"),
+    ("Connect Four", "Connect four pieces before your opponent", "Available"),
     ("Hangman", "Guess the hidden word", "Coming next"),
     ("Rock Paper Scissors", "Classic RPS", "Coming next"),
     ("Word Scramble", "Unscramble the word", "Coming next"),
@@ -85,12 +87,50 @@ def tic_tac_toe_page() -> None:
     render_ttt()
 
 
+def connect_four_page() -> None:
+    game = st.session_state.get("connect_four", {})
+    screen = game.get("screen", "setup")
+
+    if screen == "game":
+        top_left, top_right = st.columns([1, 5])
+
+        with top_left:
+            if st.button(
+                "← Back to Games",
+                key="connect_four_back_to_games",
+                use_container_width=True,
+            ):
+                st.session_state["page"] = "Home"
+                st.rerun()
+
+        with top_right:
+            if st.button(
+                "New Game",
+                key="connect_four_page_new_game",
+                use_container_width=True,
+            ):
+                new_connect_four_game()
+                st.rerun()
+    else:
+        if st.button(
+            "← Back to Games",
+            key="connect_four_setup_back_to_games",
+            use_container_width=True,
+        ):
+            st.session_state["page"] = "Home"
+            st.rerun()
+
+    render_connect_four()
+
+
 def main() -> None:
     if "page" not in st.session_state:
         st.session_state["page"] = "Home"
 
     if st.session_state["page"] == "Tic-Tac-Toe":
         tic_tac_toe_page()
+    elif st.session_state["page"] == "Connect Four":
+        connect_four_page()
     else:
         home()
 
