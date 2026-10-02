@@ -172,6 +172,12 @@ def _tick() -> None:
     _move()
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["difficulty"] = st.session_state["snake_setup_difficulty"].lower()
+    game["wrap"] = st.session_state["snake_setup_wrap"]
+
+
 def render_setup() -> None:
     game = _ensure_state()
     st.title("Snake")
@@ -187,9 +193,14 @@ def render_setup() -> None:
         ["Easy", "Medium", "Hard"],
         key="snake_setup_difficulty",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     difficulty = difficulty_label.lower()
-    wrap = st.toggle("Wrap around walls", key="snake_setup_wrap")
+    wrap = st.toggle(
+        "Wrap around walls",
+        key="snake_setup_wrap",
+        on_change=_sync_setup_preferences,
+    )
 
     if st.button("Start Game", type="primary", use_container_width=True):
         _start_game(difficulty, wrap)
