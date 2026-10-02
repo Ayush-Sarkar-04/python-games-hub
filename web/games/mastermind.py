@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from engine.game import SessionConfig
+
 from games.mastermind import DIFFICULTIES, MastermindGame, evaluate_guess, validate_guess
 
 
@@ -15,7 +17,7 @@ def new_game() -> None:
     game = _ensure_state()
     difficulty = game["difficulty"]
     core = MastermindGame()
-    config = type("Config", (), {"game": "mastermind", "difficulty": difficulty, "options": {}})()
+    config = SessionConfig(game="mastermind", difficulty=difficulty, mode="practice")
     state = core.setup(config)
     game.update({
         "screen": "game",
