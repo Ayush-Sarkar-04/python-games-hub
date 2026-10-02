@@ -68,13 +68,30 @@ def render_setup() -> None:
     game = _ensure_state()
     st.title("Rock Paper Scissors")
     st.caption("Choose your variant and match format.")
-    variant_label = st.radio("Variant", ["Standard", "Lizard & Spock"],
-                             index=0 if game["variant"] == "standard" else 1,
-                             horizontal=True)
+    if "rps_setup_variant" not in st.session_state:
+        st.session_state["rps_setup_variant"] = (
+            "Standard" if game["variant"] == "standard" else "Lizard & Spock"
+        )
+    if "rps_setup_match_type" not in st.session_state:
+        st.session_state["rps_setup_match_type"] = (
+            "Single Game" if game["match_type"] == "single" else "Fixed-Length Match"
+        )
+    if "rps_setup_difficulty" not in st.session_state:
+        st.session_state["rps_setup_difficulty"] = game["difficulty"].title()
+
+    variant_label = st.radio(
+        "Variant",
+        ["Standard", "Lizard & Spock"],
+        key="rps_setup_variant",
+        horizontal=True,
+    )
     variant = "standard" if variant_label == "Standard" else "extended"
-    match_label = st.radio("Match Type", ["Single Game", "Fixed-Length Match"],
-                           index=0 if game["match_type"] == "single" else 1,
-                           horizontal=True)
+    match_label = st.radio(
+        "Match Type",
+        ["Single Game", "Fixed-Length Match"],
+        key="rps_setup_match_type",
+        horizontal=True,
+    )
     match_type = "single" if match_label == "Single Game" else "match"
     if match_type == "match":
         st.write("Number of rounds")
@@ -93,9 +110,12 @@ def render_setup() -> None:
         rounds = game["rounds"]
     else:
         rounds = 1
-    difficulty_label = st.radio("Difficulty", ["Easy", "Medium", "Hard"],
-                                index=["easy", "medium", "hard"].index(game["difficulty"]),
-                                horizontal=True)
+    difficulty_label = st.radio(
+        "Difficulty",
+        ["Easy", "Medium", "Hard"],
+        key="rps_setup_difficulty",
+        horizontal=True,
+    )
     difficulty = difficulty_label.lower()
     if st.button("Start Game", type="primary", use_container_width=True):
         game.update({"variant": variant, "match_type": match_type, "rounds": rounds,
