@@ -189,11 +189,12 @@ def render_game() -> None:
             background:#0f131a;
             padding:8px;
         }
-        [class*="ms_cell_"] button{
+        [class*="st-key-ms_cell_"] button{
             min-height:34px !important;
             height:34px !important;
             padding:0 !important;
-            font-size:0.9rem !important;
+            font-size:0.8rem !important;
+            border-radius:5px !important;
         }
         </style>
         """,
@@ -237,41 +238,32 @@ def render_game() -> None:
         help="Turn this on to place or remove flags. Turn it off to reveal cells.",
     )
 
-    board_width = {
-        "easy": 360,
-        "medium": 600,
-        "hard": 1080,
-    }[game["difficulty"]]
+    cell_size = {"easy": 34, "medium": 28, "hard": 24}[game["difficulty"]]
 
-    with st.container(width=board_width, horizontal_alignment="center", gap="xxsmall"):
-        for row in range(game["rows"]):
-            cells = st.columns(
-                game["columns"],
-                gap="xxsmall",
-                vertical_alignment="center",
-                wrap=False,
-            )
-            for column, col in enumerate(cells):
-                with col:
-                    cell = (row, column)
-                    if game["flag_mode"]:
-                        st.button(
-                            _cell_label(game, cell),
-                            key=f"ms_cell_flag_{row}_{column}",
-                            width="stretch",
-                            disabled=game["outcome"] is not None or cell in game["revealed"],
-                            on_click=_toggle_flag,
-                            args=(row, column),
-                        )
-                    else:
-                        st.button(
-                            _cell_label(game, cell),
-                            key=f"ms_cell_reveal_{row}_{column}",
-                            width="stretch",
-                            disabled=game["outcome"] is not None or cell in game["revealed"] or cell in game["flagged"],
-                            on_click=_reveal_cell,
-                            args=(row, column),
-                        )
+    # Fixed-size buttons inside centered horizontal rows. This prevents
+    # Streamlit's column layout from stretching the board across the page.
+    for row in range(game["rows"]):
+        with st.container(horizontal=True, horizontal_alignment="center", gap=0, wrap=False):
+            for column in range(game["columns"]):
+                cell = (row, column)
+                if game["flag_mode"]:
+                    st.button(
+                        _cell_label(game, cell),
+                        key=f"ms_cell_flag_{row}_{column}",
+                        width=cell_size,
+                        disabled=game["outcome"] is not None or cell in game["revealed"],
+                        on_click=_toggle_flag,
+                        args=(row, column),
+                    )
+                else:
+                    st.button(
+                        _cell_label(game, cell),
+                        key=f"ms_cell_reveal_{row}_{column}",
+                        width=cell_size,
+                        disabled=game["outcome"] is not None or cell in game["revealed"] or cell in game["flagged"],
+                        on_click=_reveal_cell,
+                        args=(row, column),
+                    )
 
     if game["outcome"] is not None:
         if st.button("Play Again", type="primary", width="stretch"):
