@@ -119,7 +119,7 @@ def _inject_styles() -> None:
         .mm-history {
             box-sizing: border-box;
             width: 100%;
-            min-height: 104px;
+            min-height: 92px;
             background: #11151e;
             border: 1px solid #292f3b;
             border-radius: 12px;
@@ -149,7 +149,8 @@ def _inject_styles() -> None:
         }
         .mm-feedback {
             display: flex;
-            gap: 7px;
+            flex-wrap: wrap;
+            gap: 6px;
             align-items: center;
             white-space: nowrap;
         }
@@ -370,9 +371,9 @@ def render_game() -> None:
         )
 
         if game["history"]:
-            for row_start in range(0, len(game["history"]), 5):
-                row = game["history"][row_start:row_start + 5]
-                history_cols = st.columns(5, gap="small")
+            for row_start in range(0, len(game["history"]), 2):
+                row = game["history"][row_start:row_start + 2]
+                history_cols = st.columns(2, gap="small")
                 for offset, (guess, exact, misplaced) in enumerate(row):
                     index = row_start + offset + 1
                     with history_cols[offset]:
