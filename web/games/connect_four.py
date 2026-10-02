@@ -176,10 +176,30 @@ def render_setup() -> None:
 
     st.subheader("Game Mode")
 
+    if "connect_four_setup_player_mode" not in st.session_state:
+        st.session_state["connect_four_setup_player_mode"] = (
+            "Play against Computer" if game["player_mode"] == "computer" else "Two Players"
+        )
+    if "connect_four_setup_difficulty" not in st.session_state:
+        st.session_state["connect_four_setup_difficulty"] = next(
+            label for label, value in {
+                "Easy": "easy", "Medium": "medium", "Hard": "hard", "Custom": "custom"
+            }.items() if value == game["difficulty"]
+        )
+    if "connect_four_setup_first_player" not in st.session_state:
+        st.session_state["connect_four_setup_first_player"] = (
+            "You (X)" if game["player_mode"] == "computer" and game["first_player"] == PLAYER
+            else "Computer (O)" if game["player_mode"] == "computer"
+            else "Player X" if game["first_player"] == PLAYER
+            else "Player O"
+        )
+    if "connect_four_setup_minimax_depth" not in st.session_state:
+        st.session_state["connect_four_setup_minimax_depth"] = game["minimax_depth"]
+
     player_mode_label = st.radio(
         "Choose how you want to play",
         ["Play against Computer", "Two Players"],
-        index=0 if game["player_mode"] == "computer" else 1,
+        key="connect_four_setup_player_mode",
         horizontal=True,
     )
 
@@ -195,9 +215,7 @@ def render_setup() -> None:
         difficulty_label = st.radio(
             "Computer difficulty",
             ["Easy", "Medium", "Hard", "Custom"],
-            index=["easy", "medium", "hard", "custom"].index(
-                game["difficulty"]
-            ),
+            key="connect_four_setup_difficulty",
             horizontal=True,
         )
 
@@ -214,7 +232,7 @@ def render_setup() -> None:
                 "Minimax search depth",
                 min_value=CUSTOM_MINIMAX_DEPTH_MIN,
                 max_value=CUSTOM_MINIMAX_DEPTH_MAX,
-                value=game["minimax_depth"],
+                key="connect_four_setup_minimax_depth",
             )
         else:
             minimax_depth = game["minimax_depth"]
@@ -228,7 +246,7 @@ def render_setup() -> None:
         first_player_label = st.radio(
             "Choose the first player",
             ["You (X)", "Computer (O)"],
-            index=0 if game["first_player"] == PLAYER else 1,
+            key="connect_four_setup_first_player",
             horizontal=True,
         )
         first_player = (
@@ -240,7 +258,7 @@ def render_setup() -> None:
         first_player_label = st.radio(
             "Choose the first player",
             ["Player X", "Player O"],
-            index=0 if game["first_player"] == PLAYER else 1,
+            key="connect_four_setup_first_player",
             horizontal=True,
         )
         first_player = (
