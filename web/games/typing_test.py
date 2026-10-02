@@ -57,22 +57,50 @@ def render_setup() -> None:
 @st.fragment(run_every=0.2)
 def _render_active_test() -> None:
     game = _ensure_state()
-    elapsed = time.monotonic() - game["started"]
+    if game["started"] is None:
+        return
+
+    elapsed = max(0.0, time.monotonic() - game["started"])
     remaining = max(0.0, game["duration"] - elapsed)
+
+    st.markdown("### Type the passage")
+    st.markdown(
+        f'<div class="typing-passage">{game["text"]}</div>',
+        unsafe_allow_html=True,
+    )
+
     st.progress(min(elapsed / game["duration"], 1.0))
-    st.markdown(f"**Time remaining:** {remaining:.1f}s")
-    typed = st.text_area("Your typing", key="typing_test_input", height=140)
-    submit = st.button("Submit Test", type="primary", use_container_width=True)
+    timer_col, count_col = st.columns(2)
+    with timer_col:
+        st.markdown(f"**Time remaining**  \n### {remaining:.1f}s")
+    with count_col:
+        current = st.session_state.get("typing_test_input", "")
+        st.markdown(f"**Characters typed**  \n### {len(current)}")
+
+    typed = st.text_area(
+        "Your typing",
+        key="typing_test_input",
+        height=150,
+        placeholder="Start typing the passage exactly as shown above...",
+    )
+
+    submit = st.button(
+        "Submit Test",
+        type="primary",
+        use_container_width=True,
+        key="typing_test_submit",
+    )
+
     if submit or remaining <= 0:
-        metrics = calculate_metrics(game["text"], typed, min(elapsed, game["duration"]))
+        elapsed_for_score = max(min(elapsed, game["duration"]), 0.001)
+        metrics = calculate_metrics(game["text"], typed, elapsed_for_score)
         game["typed"] = typed
         game["metrics"] = metrics
         game["score"] = metrics["score"]
         game["screen"] = "result"
         st.rerun()
 
-    st.caption("Type exactly as shown. The test ends when you submit or the timer reaches zero.")
-
+    st.caption("Type exactly as shown. The test ends automatically when the timer reaches zero.")
 
 def render_game() -> None:
     game = _ensure_state()
@@ -88,5 +116,18 @@ def render_game() -> None:
             st.rerun()
         return
 
+    st.markdown("""
+    <style>
+    .typing-passage {
+        padding: 1.1rem 1.25rem;
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        line-height: 1.75;
+        font-size: 1.05rem;
+        margin-bottom: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     _render_active_test()
 
