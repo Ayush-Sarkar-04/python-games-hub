@@ -34,6 +34,8 @@ def _ensure_state() -> dict:
 
 def reset_minesweeper() -> None:
     st.session_state["minesweeper_web"] = _new_state()
+    st.session_state["minesweeper_flag_mode"] = False
+    st.session_state["minesweeper_flag_mode"] = False
 
 
 def _generate_mines(game, safe_cell):
@@ -108,6 +110,16 @@ def _toggle_flag(row: int, column: int) -> None:
         game["flagged"].add(cell)
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["difficulty"] = st.session_state["minesweeper_setup_difficulty"].lower()
+
+
+def _sync_flag_mode() -> None:
+    game = _ensure_state()
+    game["flag_mode"] = st.session_state["minesweeper_flag_mode"]
+
+
 def _start_game(difficulty: str) -> None:
     game = _ensure_state()
     settings = DIFFICULTIES[difficulty]
@@ -127,6 +139,7 @@ def _start_game(difficulty: str) -> None:
         "message": "",
         "flag_mode": False,
     })
+    st.session_state["minesweeper_flag_mode"] = False
 
 
 def new_game() -> None:
@@ -157,6 +170,7 @@ def render_setup() -> None:
         ["Easy", "Medium", "Hard"],
         key="minesweeper_setup_difficulty",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     difficulty = difficulty_label.lower()
     settings = DIFFICULTIES[difficulty]
@@ -231,12 +245,17 @@ def render_game() -> None:
         mode_label = "Flag mode" if game["flag_mode"] else "Reveal mode"
         st.caption(f"{mode_label} · Click a cell to {'flag or unflag' if game['flag_mode'] else 'reveal'} it.")
 
-    game["flag_mode"] = st.toggle(
+    if "minesweeper_flag_mode" not in st.session_state:
+        st.session_state["minesweeper_flag_mode"] = game["flag_mode"]
+
+    st.toggle(
         "Flag Mode",
-        value=game["flag_mode"],
+        key="minesweeper_flag_mode",
         disabled=game["outcome"] is not None,
+        on_change=_sync_flag_mode,
         help="Turn this on to place or remove flags. Turn it off to reveal cells.",
     )
+    game["flag_mode"] = st.session_state["minesweeper_flag_mode"]
 
     cell_size = {"easy": 34, "medium": 28, "hard": 24}[game["difficulty"]]
 

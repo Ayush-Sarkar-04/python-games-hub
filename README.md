@@ -50,7 +50,7 @@ scoring, and interaction remain inside `games/`.
 Python 3.10+ · Standard library at runtime · pytest · JSON persistence · Terminal/CLI
 ## Testing
 
-**119 tests passing.** Coverage includes the games, shared engine, hub flow,
+Automated regression tests cover the games, shared engine, hub flow,
 persistence, profiles, statistics, achievements, settings, Quick Play,
 Practice Mode, difficulty, and cross-system integration.
 ```bash
@@ -95,7 +95,7 @@ Python Games Hub is intentionally a **terminal game platform**. It is not a GUI,
 web, online multiplayer, database-backed platform, plugin ecosystem, or generic
 game-engine framework.
 
-The goal is a maintainable Python project where seven different games operate
+The goal is a maintainable Python project where nine different games operate
 as one coherent product.
 ## Documentation
 
