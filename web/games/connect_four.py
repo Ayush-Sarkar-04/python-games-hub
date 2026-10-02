@@ -46,6 +46,9 @@ def new_game() -> None:
     game["outcome"] = None
     game["winner"] = None
 
+    if game["player_mode"] == "computer" and game["current_player"] == COMPUTER:
+        _computer_turn()
+
 
 def _ensure_state() -> dict:
     if "connect_four" not in st.session_state:
@@ -160,6 +163,9 @@ def _start_game(
     game["difficulty"] = difficulty
     game["first_player"] = first_player
     game["minimax_depth"] = minimax_depth
+
+    if player_mode == "computer" and first_player == COMPUTER:
+        _computer_turn()
 
 
 def render_setup() -> None:
