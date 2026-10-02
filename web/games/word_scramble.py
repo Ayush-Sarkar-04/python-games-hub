@@ -67,6 +67,11 @@ def _render_hint(game: dict) -> str:
                        for index, letter in enumerate(game["word"]))
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["difficulty"] = st.session_state["word_scramble_setup_difficulty"].lower()
+
+
 def render_setup() -> None:
     game = _ensure_state()
     st.title("Word Scramble")
@@ -78,6 +83,7 @@ def render_setup() -> None:
         ["Easy", "Medium", "Hard"],
         key="word_scramble_setup_difficulty",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     difficulty = difficulty_label.lower()
     title, min_length, max_length = DIFFICULTY[difficulty]
