@@ -1,6 +1,6 @@
 # Python Games Hub
 
-A complete terminal-based Python game platform featuring **seven distinct games**
+A complete terminal-based Python game platform featuring **nine distinct games**
 and shared systems for sessions, profiles, statistics, achievements, progression,
 Quick Play, and persistence.
 
@@ -18,6 +18,8 @@ common infrastructure that makes the collection feel like one product.
 | **Word Scramble** | Difficulty levels, hints, scoring, local fallback |
 | **Snake** | Real-time controls, speeds, power-ups, scoring |
 | **Minesweeper** | First-click safety, flood reveal, flagging, difficulty boards |
+| **Typing Test** | Timed typing, WPM, accuracy, scoring |
+| **Mastermind** | Hidden color codes, exact/misplaced feedback, difficulty levels |
 ## Platform
 
 - Unified terminal Game Hub and Quick Play
@@ -69,6 +71,8 @@ python games/rock_paper_scissors.py
 python games/word_scramble.py
 python games/snake.py
 python games/minesweeper.py
+python games/typing_test.py
+python games/mastermind.py
 ```
 
 ## Structure
