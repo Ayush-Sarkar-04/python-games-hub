@@ -141,8 +141,8 @@ def render_game() -> None:
             background:#151922;
             border:1px solid #303642;
             border-radius:16px;
-            padding:22px 18px;
-            min-height:390px;
+            padding:18px;
+            height:343px;
             display:flex;
             flex-direction:column;
             justify-content:space-between;
@@ -181,7 +181,7 @@ def render_game() -> None:
             margin-top:3px;
         }
         .hm-hint{
-            margin-top:12px;
+            margin-top:16px;
         }
         </style>
         """,
@@ -213,6 +213,7 @@ def render_game() -> None:
             unsafe_allow_html=True,
         )
 
+        st.markdown('<div class="hm-hint"></div>', unsafe_allow_html=True)
         st.button(
             "Hint: Used" if game["hint_used"] else "Hint: Available — Use Hint",
             key="hangman_hint",
