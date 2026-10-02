@@ -391,8 +391,14 @@ def render_game() -> None:
         .snake-status-placeholder{
             height:0;
         }
+        .snake-sidebar{
+            min-height:calc(100vh - 165px);
+            display:flex;
+            flex-direction:column;
+        }
         .snake-bottom-caption{
-            margin-top:14px;
+            margin-top:auto;
+            padding-top:14px;
             color:#8b8f98;
             font-size:0.82rem;
             line-height:1.3;
@@ -414,7 +420,9 @@ def render_game() -> None:
         _render_live_board()
 
     with controls_col:
+        st.markdown('<div class="snake-sidebar">', unsafe_allow_html=True)
         _render_sidebar()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_snake() -> None:
