@@ -111,8 +111,13 @@ def render_game() -> None:
     st.markdown(
         """
         <style>
+        .block-container {
+            max-width: 1200px;
+            padding-top: 2.5rem;
+            padding-bottom: 2.5rem;
+        }
         .rps-header {
-            padding: 8px 0 18px 0;
+            padding: 4px 0 12px 0;
         }
         .rps-round {
             display: inline-block;
@@ -125,11 +130,11 @@ def render_game() -> None:
         }
         .rps-score {
             text-align: center;
-            padding: 18px 12px;
-            border-radius: 16px;
+            padding: 14px 12px;
+            border-radius: 14px;
             background: #151922;
             border: 1px solid #303642;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .rps-score-label {
             font-size: 0.82rem;
@@ -138,7 +143,7 @@ def render_game() -> None:
             letter-spacing: 0.08em;
         }
         .rps-score-value {
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 800;
             margin-top: 4px;
         }
@@ -147,39 +152,39 @@ def render_game() -> None:
             font-size: 1.15rem;
             font-weight: 800;
             color: #9ca3af;
-            padding-top: 34px;
+            padding-top: 28px;
         }
         .rps-move-card {
             text-align: center;
-            padding: 22px 12px;
-            border-radius: 18px;
+            padding: 16px 12px;
+            border-radius: 14px;
             background: #151922;
             border: 1px solid #303642;
-            min-height: 150px;
+            min-height: 118px;
         }
         .rps-move-icon {
-            font-size: 3.2rem;
+            font-size: 2.6rem;
             line-height: 1.1;
         }
         .rps-move-name {
-            margin-top: 10px;
-            font-size: 1rem;
+            margin-top: 7px;
+            font-size: 0.95rem;
             font-weight: 700;
         }
         .rps-result {
             text-align: center;
-            padding: 16px;
-            border-radius: 14px;
-            margin: 12px 0 24px 0;
+            padding: 12px;
+            border-radius: 12px;
+            margin: 8px 0 18px 0;
             background: #151922;
             border: 1px solid #303642;
             font-size: 1.05rem;
             font-weight: 700;
         }
         div[data-testid="stButton"] button {
-            min-height: 72px;
-            border-radius: 14px;
-            font-size: 1rem;
+            min-height: 58px;
+            border-radius: 12px;
+            font-size: 0.95rem;
             font-weight: 700;
         }
         </style>
