@@ -11,9 +11,15 @@ if str(ROOT_DIR) not in sys.path:
 
 from web.games.connect_four import new_game as new_connect_four_game
 from web.games.connect_four import render_connect_four
+from web.games.hangman import new_game as new_hangman_game
+from web.games.hangman import render_hangman
+from web.games.minesweeper import new_game as new_minesweeper_game
+from web.games.minesweeper import render_minesweeper
 from web.games.rock_paper_scissors import new_game as new_rps_game
 from web.games.rock_paper_scissors import render_rps
 from web.games.tic_tac_toe import new_game, render_ttt
+from web.games.snake import new_game as new_snake_game
+from web.games.snake import render_snake
 from web.games.word_scramble import new_game as new_word_scramble_game
 from web.games.word_scramble import render_word_scramble
 
@@ -22,11 +28,11 @@ st.set_page_config(page_title="Python Games Hub", page_icon="🎮", layout="wide
 GAMES = [
     ("Tic-Tac-Toe", "Classic 3x3 strategy game", "Available"),
     ("Connect Four", "Connect four pieces before your opponent", "Available"),
-    ("Hangman", "Guess the hidden word", "Coming next"),
+    ("Hangman", "Guess the hidden word", "Available"),
     ("Rock Paper Scissors", "Classic RPS", "Available"),
     ("Word Scramble", "Unscramble the word", "Available"),
-    ("Snake", "Classic Snake", "Coming next"),
-    ("Minesweeper", "Clear the board without hitting a mine", "Coming next"),
+    ("Snake", "Classic Snake", "Available"),
+    ("Minesweeper", "Clear the board without hitting a mine", "Available"),
 ]
 
 
@@ -128,6 +134,47 @@ def word_scramble_page() -> None:
     render_word_scramble()
 
 
+
+def _game_page(
+    state_key: str,
+    new_game_fn,
+    render_fn,
+    back_key: str,
+    new_key: str,
+) -> None:
+    game = st.session_state.get(state_key, {})
+    screen = game.get("screen", "setup")
+    if screen == "game":
+        top_left, top_right = st.columns([1, 5])
+        with top_left:
+            if st.button("← Back to Games", key=back_key, use_container_width=True):
+                st.session_state["page"] = "Home"
+                st.rerun()
+        with top_right:
+            if st.button("New Game", key=new_key, use_container_width=True):
+                new_game_fn()
+                st.rerun()
+    else:
+        if st.button("← Back to Games", key=back_key, use_container_width=True):
+            st.session_state["page"] = "Home"
+            st.rerun()
+    render_fn()
+
+
+def hangman_page() -> None:
+    _game_page("hangman", new_hangman_game, render_hangman,
+               "hangman_back_to_games", "hangman_page_new_game")
+
+
+def snake_page() -> None:
+    _game_page("snake_web", new_snake_game, render_snake,
+               "snake_back_to_games", "snake_page_new_game")
+
+
+def minesweeper_page() -> None:
+    _game_page("minesweeper_web", new_minesweeper_game, render_minesweeper,
+               "minesweeper_back_to_games", "minesweeper_page_new_game")
+
 def main() -> None:
     if "page" not in st.session_state:
         st.session_state["page"] = "Home"
@@ -139,6 +186,12 @@ def main() -> None:
         rps_page()
     elif st.session_state["page"] == "Word Scramble":
         word_scramble_page()
+    elif st.session_state["page"] == "Hangman":
+        hangman_page()
+    elif st.session_state["page"] == "Snake":
+        snake_page()
+    elif st.session_state["page"] == "Minesweeper":
+        minesweeper_page()
     else:
         home()
 
