@@ -411,7 +411,7 @@ def render_game() -> None:
                 st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.markdown(
-                '<div class="mm-guesses-header"><div class="mm-panel-title" style="margin:0;">Your guesses</div></div><div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
+                '<div class="mm-empty" style="padding-top:18px;">No guesses yet. Make your first attempt below.</div>',
                 unsafe_allow_html=True,
             )
 
