@@ -208,7 +208,7 @@ def render_setup() -> None:
             "Custom": "custom",
         }[difficulty_label]
 
-        if difficulty == "Custom":
+        if difficulty == "custom":
             st.subheader("Custom Difficulty")
             minimax_depth = st.slider(
                 "Minimax search depth",
