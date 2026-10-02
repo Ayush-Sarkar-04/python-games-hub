@@ -22,7 +22,7 @@ from web.games.snake import new_game as new_snake_game
 from web.games.snake import render_snake
 from web.games.word_scramble import new_game as new_word_scramble_game
 from web.games.typing_test import new_game as new_typing_test_game
-from web.games.typing_test import render_typing_test
+from web.games.typing_test import render_game as render_typing_test
 from web.games.mastermind import new_game as new_mastermind_game
 from web.games.mastermind import render_mastermind
 from web.games.word_scramble import render_word_scramble
