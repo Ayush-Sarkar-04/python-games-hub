@@ -22,6 +22,7 @@ def _new_state() -> dict:
         "score": 0,
         "outcome": None,
         "message": "",
+        "flag_mode": False,
     }
 
 
@@ -124,6 +125,7 @@ def _start_game(difficulty: str) -> None:
         "score": 0,
         "outcome": None,
         "message": "",
+        "flag_mode": False,
     })
 
 
@@ -166,16 +168,35 @@ def render_setup() -> None:
 
 def render_game() -> None:
     game = _ensure_state()
+
     st.markdown(
         """
         <style>
-        .ms-stat{padding:9px 14px;border:1px solid #303642;border-radius:10px;
-        background:#151922;display:flex;justify-content:space-between;margin-bottom:8px;}
-        .ms-board{overflow-x:auto;padding-bottom:6px;}
+        .ms-stat{
+            padding:9px 14px;
+            border:1px solid #303642;
+            border-radius:10px;
+            background:#151922;
+            display:flex;
+            justify-content:space-between;
+        }
+        .ms-board{
+            border:1px solid #303642;
+            border-radius:14px;
+            background:#0f131a;
+            padding:8px;
+        }
+        [class*="ms_cell_"] button{
+            min-height:34px !important;
+            height:34px !important;
+            padding:0 !important;
+            font-size:0.9rem !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
     st.title("Minesweeper")
     st.caption(
         f"{game['difficulty'].title()} · {game['rows']} × {game['columns']} · "
@@ -203,36 +224,55 @@ def render_game() -> None:
     elif game["outcome"] == "loss":
         st.error(f"Game over — {game['message']}")
     else:
-        st.caption("Reveal: click a cell. Flag: use the flag button below each row.")
+        mode_label = "Flag mode" if game["flag_mode"] else "Reveal mode"
+        st.caption(f"{mode_label} · Click a cell to {'flag or unflag' if game['flag_mode'] else 'reveal'} it.")
 
-    for row in range(game["rows"]):
-        cells = st.columns(game["columns"])
-        for column, col in enumerate(cells):
-            with col:
-                cell = (row, column)
-                st.button(
-                    _cell_label(game, cell),
-                    key=f"ms_reveal_{row}_{column}",
-                    use_container_width=True,
-                    disabled=game["outcome"] is not None or cell in game["revealed"] or cell in game["flagged"],
-                    on_click=_reveal_cell,
-                    args=(row, column),
-                )
-        flag_cols = st.columns(game["columns"])
-        for column, col in enumerate(flag_cols):
-            with col:
-                cell = (row, column)
-                st.button(
-                    "⚑",
-                    key=f"ms_flag_{row}_{column}",
-                    use_container_width=True,
-                    disabled=game["outcome"] is not None or cell in game["revealed"],
-                    on_click=_toggle_flag,
-                    args=(row, column),
-                )
+    game["flag_mode"] = st.toggle(
+        "Flag Mode",
+        value=game["flag_mode"],
+        disabled=game["outcome"] is not None,
+        help="Turn this on to place or remove flags. Turn it off to reveal cells.",
+    )
+
+    board_width = {
+        "easy": 330,
+        "medium": 570,
+        "hard": 1030,
+    }[game["difficulty"]]
+
+    with st.container(width=board_width, horizontal_alignment="center", gap="xxsmall"):
+        for row in range(game["rows"]):
+            cells = st.columns(
+                game["columns"],
+                gap="xxsmall",
+                vertical_alignment="center",
+                width=board_width,
+                wrap=False,
+            )
+            for column, col in enumerate(cells):
+                with col:
+                    cell = (row, column)
+                    if game["flag_mode"]:
+                        st.button(
+                            _cell_label(game, cell),
+                            key=f"ms_cell_flag_{row}_{column}",
+                            width="stretch",
+                            disabled=game["outcome"] is not None or cell in game["revealed"],
+                            on_click=_toggle_flag,
+                            args=(row, column),
+                        )
+                    else:
+                        st.button(
+                            _cell_label(game, cell),
+                            key=f"ms_cell_reveal_{row}_{column}",
+                            width="stretch",
+                            disabled=game["outcome"] is not None or cell in game["revealed"] or cell in game["flagged"],
+                            on_click=_reveal_cell,
+                            args=(row, column),
+                        )
 
     if game["outcome"] is not None:
-        if st.button("Play Again", type="primary", use_container_width=True):
+        if st.button("Play Again", type="primary", width="stretch"):
             new_game()
             st.rerun()
 
