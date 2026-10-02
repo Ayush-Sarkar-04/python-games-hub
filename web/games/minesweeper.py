@@ -149,10 +149,13 @@ def render_setup() -> None:
     st.title("Minesweeper")
     st.caption("Reveal every safe cell without hitting a mine.")
 
+    if "minesweeper_setup_difficulty" not in st.session_state:
+        st.session_state["minesweeper_setup_difficulty"] = game["difficulty"].title()
+
     difficulty_label = st.radio(
         "Difficulty",
         ["Easy", "Medium", "Hard"],
-        index=["easy", "medium", "hard"].index(game["difficulty"]),
+        key="minesweeper_setup_difficulty",
         horizontal=True,
     )
     difficulty = difficulty_label.lower()
@@ -235,9 +238,9 @@ def render_game() -> None:
     )
 
     board_width = {
-        "easy": 330,
-        "medium": 570,
-        "hard": 1030,
+        "easy": 360,
+        "medium": 600,
+        "hard": 1080,
     }[game["difficulty"]]
 
     with st.container(width=board_width, horizontal_alignment="center", gap="xxsmall"):
@@ -246,7 +249,6 @@ def render_game() -> None:
                 game["columns"],
                 gap="xxsmall",
                 vertical_alignment="center",
-                width=board_width,
                 wrap=False,
             )
             for column, col in enumerate(cells):
