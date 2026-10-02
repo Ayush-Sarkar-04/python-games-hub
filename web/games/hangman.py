@@ -106,18 +106,22 @@ def render_setup() -> None:
     st.caption("Guess the hidden word before you run out of attempts.")
 
     labels = list(game["words"])
-    current = game["category"]
+    if "hangman_setup_category" not in st.session_state:
+        st.session_state["hangman_setup_category"] = game["category"]
+    if "hangman_setup_difficulty" not in st.session_state:
+        st.session_state["hangman_setup_difficulty"] = game["difficulty"].title()
+
     category_label = st.radio(
         "Category",
         labels,
-        index=labels.index(current),
+        key="hangman_setup_category",
         format_func=lambda value: game["words"][value]["name"],
         horizontal=True,
     )
     difficulty_label = st.radio(
         "Difficulty",
         ["Easy", "Medium", "Hard"],
-        index=["easy", "medium", "hard"].index(game["difficulty"]),
+        key="hangman_setup_difficulty",
         horizontal=True,
     )
     difficulty = difficulty_label.lower()
