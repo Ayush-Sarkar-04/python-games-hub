@@ -71,9 +71,14 @@ def render_setup() -> None:
     game = _ensure_state()
     st.title("Word Scramble")
     st.caption("Unscramble the word before you run out of attempts.")
-    difficulty_label = st.radio("Difficulty", ["Easy", "Medium", "Hard"],
-                                index=["easy", "medium", "hard"].index(game["difficulty"]),
-                                horizontal=True)
+    if "word_scramble_setup_difficulty" not in st.session_state:
+        st.session_state["word_scramble_setup_difficulty"] = game["difficulty"].title()
+    difficulty_label = st.radio(
+        "Difficulty",
+        ["Easy", "Medium", "Hard"],
+        key="word_scramble_setup_difficulty",
+        horizontal=True,
+    )
     difficulty = difficulty_label.lower()
     title, min_length, max_length = DIFFICULTY[difficulty]
     st.write(f"**{title}** • Word length: {min_length}–{max_length} letters • {MAX_ATTEMPTS} attempts")
