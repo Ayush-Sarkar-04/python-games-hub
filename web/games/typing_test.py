@@ -68,7 +68,8 @@ def _render_active_test() -> None:
 def render_game() -> None:
     game = _ensure_state()
     st.title("Typing Test")
-    st.caption(f"{game['difficulty'].title()} difficulty • {game['duration']} seconds")
+    duration = game.get("duration", game.get("duration_seconds", 30))
+    st.caption(f"{game['difficulty'].title()} difficulty • {duration} seconds")
 
     if game["started"] is None:
         st.markdown("### Type this passage")
