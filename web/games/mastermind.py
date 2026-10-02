@@ -308,42 +308,46 @@ def render_game() -> None:
             unsafe_allow_html=True,
         )
 
-    st.markdown(
-        f"""
-        <div class="mm-panel mm-shell">
-            <div class="mm-panel-title">Available colors</div>
-            <div class="mm-colors">{_color_legend(game["colors"])}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    colors_col, guesses_col = st.columns([1, 2], gap="large")
 
-    st.markdown('<div class="mm-panel mm-shell"><div class="mm-panel-title">Your guesses</div>', unsafe_allow_html=True)
-
-    if game["history"]:
-        for index, (guess, exact, misplaced) in enumerate(game["history"], start=1):
-            pegs = "".join(_peg(color) for color in guess)
-            st.markdown(
-                f"""
-                <div class="mm-history">
-                    <div class="mm-attempt">#{index:02d}</div>
-                    <div class="mm-pegs">{pegs}</div>
-                    <div class="mm-feedback">
-                        <span class="mm-badge">Exact {exact}</span>
-                        <span class="mm-badge">Misplaced {misplaced}</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    else:
+    with colors_col:
         st.markdown(
-            '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
+            '<div class="mm-panel" style="margin-top:14px;">'
+            '<div class="mm-panel-title">Available colors</div>'
+            '<div class="mm-colors">' + _color_legend(game["colors"]) + '</div>'
+            '</div>',
             unsafe_allow_html=True,
         )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    with guesses_col:
+        st.markdown(
+            '<div class="mm-panel" style="margin-top:14px;"><div class="mm-panel-title">Your guesses</div>',
+            unsafe_allow_html=True,
+        )
 
+        if game["history"]:
+            for index, (guess, exact, misplaced) in enumerate(game["history"], start=1):
+                pegs = "".join(_peg(color) for color in guess)
+                st.markdown(
+                    f"""
+                    <div class="mm-history">
+                        <div class="mm-attempt">#{index:02d}</div>
+                        <div class="mm-pegs">{pegs}</div>
+                        <div class="mm-feedback">
+                            <span class="mm-badge">Exact {exact}</span>
+                            <span class="mm-badge">Misplaced {misplaced}</span>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
     st.markdown(
         '<div class="mm-panel mm-shell"><div class="mm-panel-title">Make a guess</div>',
         unsafe_allow_html=True,
