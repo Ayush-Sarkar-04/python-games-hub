@@ -326,6 +326,42 @@ def render_game() -> None:
             unsafe_allow_html=True,
         )
 
+        st.markdown(
+            '<div class="mm-panel" style="margin-top:14px;">'
+            '<div class="mm-panel-title">Make a guess</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"Enter {game['length']} colors separated by spaces.")
+        raw = st.text_input(
+            "Guess",
+            placeholder="R G B Y",
+            label_visibility="collapsed",
+            key="mastermind_guess",
+            disabled=game["outcome"] is not None,
+        )
+        if st.button("Submit Guess", type="primary", use_container_width=True):
+            try:
+                guess = validate_guess(raw, game["difficulty"])
+            except ValueError as exc:
+                game["message"] = str(exc)
+                st.rerun()
+            else:
+                exact, misplaced = evaluate_guess(tuple(game["code"]), guess)
+                game["attempts"] += 1
+                game["history"].append((guess, exact, misplaced))
+                game["message"] = f"Exact: {exact} · Misplaced: {misplaced}"
+                if exact == game["length"]:
+                    game["outcome"] = "win"
+                    game["score"] = (game["max_attempts"] - game["attempts"] + 1) * 10
+                elif game["attempts"] >= game["max_attempts"]:
+                    game["outcome"] = "loss"
+                st.rerun()
+
+        if game["message"] and game["outcome"] is None:
+            st.info(game["message"])
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
     with guesses_col:
         st.markdown(
             '<div class="mm-panel" style="margin-top:14px;"><div class="mm-panel-title">Your guesses</div>',
@@ -357,40 +393,24 @@ def render_game() -> None:
             )
 
         st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown(
-        '<div class="mm-panel mm-shell"><div class="mm-panel-title">Make a guess</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption(f"Enter {game['length']} colors separated by spaces.")
-    raw = st.text_input(
-        "Guess",
-        placeholder="Example: R G B Y",
-        label_visibility="collapsed",
-        key="mastermind_guess",
-        disabled=game["outcome"] is not None,
-    )
-    if st.button("Submit Guess", type="primary", use_container_width=True):
-        try:
-            guess = validate_guess(raw, game["difficulty"])
-        except ValueError as exc:
-            game["message"] = str(exc)
-            st.rerun()
-        else:
-            exact, misplaced = evaluate_guess(tuple(game["code"]), guess)
-            game["attempts"] += 1
-            game["history"].append((guess, exact, misplaced))
-            game["message"] = f"Exact: {exact} · Misplaced: {misplaced}"
-            if exact == game["length"]:
-                game["outcome"] = "win"
-                game["score"] = (game["max_attempts"] - game["attempts"] + 1) * 10
-            elif game["attempts"] >= game["max_attempts"]:
-                game["outcome"] = "loss"
-            st.rerun()
 
-    if game["message"] and game["outcome"] is None:
-        st.info(game["message"])
+    if game["outcome"] == "win":
+        st.markdown(
+            f'<div class="mm-result mm-result-win mm-shell">Code cracked. Score: {game["score"]}</div>',
+            unsafe_allow_html=True,
+        )
+    elif game["outcome"] == "loss":
+        code = "".join(_peg(color, "30px") for color in game["code"])
+        st.markdown(
+            f'<div class="mm-result mm-result-loss mm-shell">Code not cracked. The sequence was '
+            f'<span style="display:inline-flex;gap:7px;vertical-align:middle;margin-left:8px;">{code}</span></div>',
+            unsafe_allow_html=True,
+        )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    if game["outcome"] is not None:
+        if st.button("Play Again", type="primary", use_container_width=True):
+            new_game()
+            st.rerun()
 
     if game["outcome"] == "win":
         st.markdown(
