@@ -116,20 +116,36 @@ def _inject_styles() -> None:
             border: 2px solid rgba(255,255,255,.55);
             box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
         }
+        .mm-guesses-header {
+            box-sizing: border-box;
+            width: 100%;
+            height: 54px;
+            background: linear-gradient(145deg, #151922, #10131a);
+            border: 1px solid #2b3140;
+            border-radius: 14px;
+            padding: 17px 20px;
+            margin-bottom: 14px;
+        }
         .mm-history {
             box-sizing: border-box;
             width: 100%;
-            min-height: 92px;
+            min-height: 128px;
             background: #11151e;
             border: 1px solid #292f3b;
-            border-radius: 12px;
-            padding: 10px;
+            border-radius: 14px;
+            padding: 16px 18px;
+        }
+        .mm-history-row {
+            margin-bottom: 14px;
+        }
+        .mm-history-row:last-child {
+            margin-bottom: 0;
         }
         .mm-attempt {
             color: #7f899b;
             font-weight: 800;
             font-size: 0.72rem;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
         .mm-pegs {
             display: flex;
@@ -366,14 +382,15 @@ def render_game() -> None:
 
     with guesses_col:
         st.markdown(
-            '<div class="mm-panel" style="margin-top:14px; min-height:118px;"><div class="mm-panel-title">Your guesses</div>',
+            '<div class="mm-guesses-header"><div class="mm-panel-title" style="margin:0;">Your guesses</div></div>',
             unsafe_allow_html=True,
         )
 
         if game["history"]:
             for row_start in range(0, len(game["history"]), 2):
                 row = game["history"][row_start:row_start + 2]
-                history_cols = st.columns(2, gap="small")
+                st.markdown('<div class="mm-history-row">', unsafe_allow_html=True)
+                history_cols = st.columns(2, gap="medium")
                 for offset, (guess, exact, misplaced) in enumerate(row):
                     index = row_start + offset + 1
                     with history_cols[offset]:
@@ -383,7 +400,7 @@ def render_game() -> None:
                             <div class="mm-history">
                                 <div class="mm-attempt">#{index:02d}</div>
                                 <div class="mm-pegs">{pegs}</div>
-                                <div class="mm-feedback" style="margin-top:8px;">
+                                <div class="mm-feedback" style="margin-top:14px;">
                                     <span class="mm-badge">Exact {exact}</span>
                                     <span class="mm-badge">Misplaced {misplaced}</span>
                                 </div>
@@ -391,9 +408,10 @@ def render_game() -> None:
                             """,
                             unsafe_allow_html=True,
                         )
+                st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.markdown(
-                '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
+                '<div class="mm-guesses-header"><div class="mm-panel-title" style="margin:0;">Your guesses</div></div><div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
                 unsafe_allow_html=True,
             )
 
