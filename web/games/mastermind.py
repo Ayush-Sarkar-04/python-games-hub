@@ -95,7 +95,7 @@ def _inject_styles() -> None:
         .mm-colors {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
         .mm-color {
             display: inline-flex;
@@ -116,15 +116,10 @@ def _inject_styles() -> None:
             border: 2px solid rgba(255,255,255,.55);
             box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
         }
-        .mm-guess-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-            width: 100%;
-        }
         .mm-history {
-            min-width: 0;
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 104px;
             background: #11151e;
             border: 1px solid #292f3b;
             border-radius: 12px;
@@ -321,11 +316,11 @@ def render_game() -> None:
             unsafe_allow_html=True,
         )
 
-    colors_col, guesses_col = st.columns([1, 2], gap="large")
+    colors_col, guesses_col = st.columns([1, 2], gap="medium")
 
     with colors_col:
         st.markdown(
-            '<div class="mm-panel" style="margin-top:14px;">'
+            '<div class="mm-panel" style="margin-top:14px; min-height:118px;">'
             '<div class="mm-panel-title">Available colors</div>'
             '<div class="mm-colors">' + _color_legend(game["colors"]) + '</div>'
             '</div>',
@@ -370,31 +365,32 @@ def render_game() -> None:
 
     with guesses_col:
         st.markdown(
-            '<div class="mm-panel" style="margin-top:14px;"><div class="mm-panel-title">Your guesses</div>',
+            '<div class="mm-panel" style="margin-top:14px; min-height:118px;"><div class="mm-panel-title">Your guesses</div>',
             unsafe_allow_html=True,
         )
 
         if game["history"]:
-            history_cards = []
-            for index, (guess, exact, misplaced) in enumerate(game["history"], start=1):
-                pegs = "".join(_peg(color) for color in guess)
-                history_cards.append(
-                    f"""
-                    <div class="mm-history">
-                        <div class="mm-attempt">#{index:02d}</div>
-                        <div class="mm-pegs">{pegs}</div>
-                        <div class="mm-feedback" style="margin-top:8px;">
-                            <span class="mm-badge">Exact {exact}</span>
-                            <span class="mm-badge">Misplaced {misplaced}</span>
-                        </div>
-                    </div>
-                    """
-                )
-            st.markdown(
-                '<div class="mm-guess-grid">' + "".join(history_cards) + "</div>",
-                unsafe_allow_html=True,
-            )
-        else:
+            for row_start in range(0, len(game["history"]), 5):
+                row = game["history"][row_start:row_start + 5]
+                history_cols = st.columns(5, gap="small")
+                for offset, (guess, exact, misplaced) in enumerate(row):
+                    index = row_start + offset + 1
+                    with history_cols[offset]:
+                        pegs = "".join(_peg(color, "24px") for color in guess)
+                        st.markdown(
+                            f"""
+                            <div class="mm-history">
+                                <div class="mm-attempt">#{index:02d}</div>
+                                <div class="mm-pegs">{pegs}</div>
+                                <div class="mm-feedback" style="margin-top:8px;">
+                                    <span class="mm-badge">Exact {exact}</span>
+                                    <span class="mm-badge">Misplaced {misplaced}</span>
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                else:
             st.markdown(
                 '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
                 unsafe_allow_html=True,
