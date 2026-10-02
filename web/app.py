@@ -13,7 +13,11 @@ if str(ROOT_DIR) not in sys.path:
 
 from web.games.connect_four import new_game as new_connect_four_game
 from web.games.connect_four import render_connect_four
+from web.games.rock_paper_scissors import new_game as new_rps_game
+from web.games.rock_paper_scissors import render_rps
 from web.games.tic_tac_toe import new_game, render_ttt
+from web.games.word_scramble import new_game as new_word_scramble_game
+from web.games.word_scramble import render_word_scramble
 
 
 st.set_page_config(
@@ -27,8 +31,8 @@ GAMES = [
     ("Tic-Tac-Toe", "Classic 3x3 strategy game", "Available"),
     ("Connect Four", "Connect four pieces before your opponent", "Available"),
     ("Hangman", "Guess the hidden word", "Coming next"),
-    ("Rock Paper Scissors", "Classic RPS", "Coming next"),
-    ("Word Scramble", "Unscramble the word", "Coming next"),
+    ("Rock Paper Scissors", "Classic RPS", "Available"),
+    ("Word Scramble", "Unscramble the word", "Available"),
     ("Snake", "Classic Snake", "Coming next"),
     ("Minesweeper", "Clear the board without hitting a mine", "Coming next"),
 ]
