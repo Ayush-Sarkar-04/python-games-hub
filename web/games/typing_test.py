@@ -11,7 +11,16 @@ from engine.game import SessionConfig
 def _ensure_state() -> dict:
     if "typing_test" not in st.session_state:
         st.session_state["typing_test"] = {"screen": "setup", "difficulty": "medium"}
-    return st.session_state["typing_test"]
+    game = st.session_state["typing_test"]
+    game.setdefault("difficulty", "medium")
+    game.setdefault("text", "")
+    game.setdefault("duration", 30)
+    game.setdefault("started", None)
+    game.setdefault("typed", "")
+    game.setdefault("metrics", None)
+    game.setdefault("score", 0)
+    game.setdefault("screen", "setup")
+    return game
 
 
 def new_game() -> None:
