@@ -141,22 +141,26 @@ def render_game() -> None:
             letter-spacing: 0.08em;
         }
         .ws-stat {
-            text-align: center;
-            padding: 14px 10px;
-            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            min-height: 44px;
+            box-sizing: border-box;
+            padding: 8px 14px;
+            border-radius: 10px;
             background: #151922;
             border: 1px solid #303642;
         }
         .ws-stat-label {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: #9ca3af;
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }
         .ws-stat-value {
-            font-size: 1.5rem;
+            font-size: 1rem;
             font-weight: 800;
-            margin-top: 4px;
         }
         .ws-feedback {
             min-height: 42px;
