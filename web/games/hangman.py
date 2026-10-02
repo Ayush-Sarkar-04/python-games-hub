@@ -137,82 +137,128 @@ def render_game() -> None:
     st.markdown(
         """
         <style>
-        .hm-stage{font-family:monospace;white-space:pre;display:flex;justify-content:center;
-        background:#151922;border:1px solid #303642;border-radius:16px;padding:18px;
-        font-size:1rem;line-height:1.25;}
-        .hm-word{text-align:center;font-size:2rem;font-weight:800;letter-spacing:.22em;
-        padding:18px;border-radius:14px;background:#151922;border:1px solid #303642;}
-        .hm-stat{text-align:center;padding:10px;border-radius:10px;background:#151922;
-        border:1px solid #303642;}
-        .hm-label{font-size:.72rem;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;}
-        .hm-value{font-size:1.15rem;font-weight:800;margin-top:3px;}
+        .hm-panel{
+            background:#151922;
+            border:1px solid #303642;
+            border-radius:16px;
+            padding:22px 18px;
+            min-height:390px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+        }
+        .hm-stage{
+            font-family:monospace;
+            white-space:pre;
+            text-align:center;
+            font-size:1rem;
+            line-height:1.2;
+            margin:4px 0 18px;
+        }
+        .hm-word{
+            text-align:center;
+            font-size:2rem;
+            font-weight:800;
+            letter-spacing:.22em;
+            padding:16px 8px 6px;
+        }
+        .hm-stat{
+            text-align:center;
+            padding:10px;
+            border-radius:10px;
+            background:#151922;
+            border:1px solid #303642;
+        }
+        .hm-label{
+            font-size:.72rem;
+            color:#9ca3af;
+            text-transform:uppercase;
+            letter-spacing:.08em;
+        }
+        .hm-value{
+            font-size:1.15rem;
+            font-weight:800;
+            margin-top:3px;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
     st.title("Hangman")
     st.caption(
         f"{game['words'][game['category']]['name']} • "
         f"{game['difficulty'].title()} difficulty"
     )
 
-    stage = HANGMAN_STAGES[min(game["attempts"], len(HANGMAN_STAGES) - 1)]
-    st.markdown(f'<div class="hm-stage">{stage}</div>', unsafe_allow_html=True)
+    left, right = st.columns([1, 2], gap="large")
 
+    stage = HANGMAN_STAGES[min(game["attempts"], len(HANGMAN_STAGES) - 1)]
     word_display = " ".join(
         letter.upper() if letter in game["guessed"] else "_"
         for letter in game["word"]
     )
-    st.markdown(f'<div class="hm-word">{word_display}</div>', unsafe_allow_html=True)
 
-    stats = st.columns(3)
-    values = [
-        ("Attempts Left", game["max_attempts"] - game["attempts"]),
-        ("Guessed", len(game["guessed"])),
-        ("Hint", "Used" if game["hint_used"] else "Available"),
-    ]
-    for col, (label, value) in zip(stats, values):
-        with col:
-            st.markdown(
-                f'<div class="hm-stat"><div class="hm-label">{label}</div>'
-                f'<div class="hm-value">{value}</div></div>',
-                unsafe_allow_html=True,
-            )
-
-    if game["message"] and game["outcome"] is None:
-        st.info(game["message"])
-
-    if game["outcome"] is not None:
-        if game["outcome"] == "win":
-            st.success(f"You won! The word was **{game['word'].upper()}**.")
-        else:
-            st.error(f"Game over. The word was **{game['word'].upper()}**.")
-        return
-
-    hint_col, _ = st.columns([1, 4])
-    with hint_col:
-        st.button(
-            "Use Hint",
-            key="hangman_hint",
-            disabled=game["hint_used"],
-            on_click=_use_hint,
-            use_container_width=True,
+    with left:
+        st.markdown(
+            f'''
+            <div class="hm-panel">
+                <div class="hm-stage">{stage}</div>
+                <div class="hm-word">{word_display}</div>
+            </div>
+            ''',
+            unsafe_allow_html=True,
         )
 
-    st.subheader("Choose a letter")
-    alphabet = "abcdefghijklmnopqrstuvwxyz"
-    for start in range(0, 26, 7):
-        cols = st.columns(7)
-        for col, letter in zip(cols, alphabet[start:start + 7]):
+    with right:
+        stats = st.columns(3)
+        values = [
+            ("Attempts Left", game["max_attempts"] - game["attempts"]),
+            ("Guessed", len(game["guessed"])),
+            ("Hint", "Used" if game["hint_used"] else "Available"),
+        ]
+        for col, (label, value) in zip(stats, values):
             with col:
-                st.button(
-                    letter.upper(),
-                    key=f"hangman_letter_{letter}",
-                    disabled=letter in game["guessed"],
-                    on_click=_guess,
-                    args=(letter,),
-                    use_container_width=True,
+                st.markdown(
+                    f'<div class="hm-stat"><div class="hm-label">{label}</div>'
+                    f'<div class="hm-value">{value}</div></div>',
+                    unsafe_allow_html=True,
                 )
+
+        hint_col, _ = st.columns([1, 2])
+        with hint_col:
+            st.button(
+                "Use Hint",
+                key="hangman_hint",
+                disabled=game["hint_used"],
+                on_click=_use_hint,
+                use_container_width=True,
+            )
+
+        if game["message"] and game["outcome"] is None:
+            st.info(game["message"])
+
+        if game["outcome"] is not None:
+            if game["outcome"] == "win":
+                st.success(f"You won! The word was **{game['word'].upper()}**.")
+            else:
+                st.error(f"Game over. The word was **{game['word'].upper()}**.")
+            return
+
+        st.subheader("Choose a letter")
+        alphabet = "abcdefghijklmnopqrstuvwxyz"
+        for start in range(0, 26, 6):
+            cols = st.columns(6)
+            for col, letter in zip(cols, alphabet[start:start + 6]):
+                with col:
+                    st.button(
+                        letter.upper(),
+                        key=f"hangman_letter_{letter}",
+                        disabled=letter in game["guessed"],
+                        on_click=_guess,
+                        args=(letter,),
+                        use_container_width=True,
+                    )
 
 
 def render_hangman() -> None:
