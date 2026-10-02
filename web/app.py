@@ -21,6 +21,10 @@ from web.games.tic_tac_toe import new_game, render_ttt
 from web.games.snake import new_game as new_snake_game
 from web.games.snake import render_snake
 from web.games.word_scramble import new_game as new_word_scramble_game
+from web.games.typing_test import new_game as new_typing_test_game
+from web.games.typing_test import render_typing_test
+from web.games.mastermind import new_game as new_mastermind_game
+from web.games.mastermind import render_mastermind
 from web.games.word_scramble import render_word_scramble
 
 st.set_page_config(page_title="Python Games Hub", page_icon="🎮", layout="wide")
@@ -33,6 +37,8 @@ GAMES = [
     ("Word Scramble", "Unscramble the word", "Available"),
     ("Snake", "Classic Snake", "Available"),
     ("Minesweeper", "Clear the board without hitting a mine", "Available"),
+    ("Typing Test", "Measure typing speed and accuracy", "Available"),
+    ("Mastermind", "Crack the hidden color code", "Available"),
 ]
 
 
@@ -175,6 +181,16 @@ def minesweeper_page() -> None:
     _game_page("minesweeper_web", new_minesweeper_game, render_minesweeper,
                "minesweeper_back_to_games", "minesweeper_page_new_game")
 
+
+def typing_test_page() -> None:
+    _game_page("typing_test", new_typing_test_game, render_typing_test,
+               "typing_test_back_to_games", "typing_test_page_new_game")
+
+
+def mastermind_page() -> None:
+    _game_page("mastermind", new_mastermind_game, render_mastermind,
+               "mastermind_back_to_games", "mastermind_page_new_game")
+
 def main() -> None:
     if "page" not in st.session_state:
         st.session_state["page"] = "Home"
@@ -192,6 +208,10 @@ def main() -> None:
         snake_page()
     elif st.session_state["page"] == "Minesweeper":
         minesweeper_page()
+    elif st.session_state["page"] == "Typing Test":
+        typing_test_page()
+    elif st.session_state["page"] == "Mastermind":
+        mastermind_page()
     else:
         home()
 
