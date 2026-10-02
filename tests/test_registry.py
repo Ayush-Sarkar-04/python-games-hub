@@ -53,6 +53,8 @@ def test_registry_contains_all_game_classes():
         "WordScrambleGame",
         "SnakeGame",
         "MinesweeperGame",
+        "TypingTestGame",
+        "MastermindGame",
     }
 
 
@@ -67,6 +69,8 @@ def test_all_registered_games_accept_hub_session_configuration():
         "word_scramble": {},
         "snake": {"wrap": False},
         "minesweeper": {},
+        "typing_test": {},
+        "mastermind": {},
     }
     for game, definition in GAME_REGISTRY.items():
         config = build_session_config(game, "medium", options=options[game])
