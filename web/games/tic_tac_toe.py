@@ -166,6 +166,14 @@ def _computer_turn() -> None:
     game["current_player"] = "X"
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["player_mode"] = "computer" if st.session_state["ttt_setup_player_mode"] == "Play against Computer" else "player"
+    game["difficulty"] = DIFFICULTIES[st.session_state["ttt_setup_difficulty"]]
+    game["personality"] = st.session_state["ttt_setup_personality"]
+    game["minimax_depth"] = st.session_state["ttt_setup_minimax_depth"]
+
+
 def render_setup() -> None:
     game = _ensure_state()
 
@@ -192,6 +200,7 @@ def render_setup() -> None:
         ["Play against Computer", "Two Players"],
         key="ttt_setup_player_mode",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
 
     player_mode = (
@@ -208,6 +217,7 @@ def render_setup() -> None:
         key="ttt_setup_difficulty",
         horizontal=True,
         disabled=player_mode != "computer",
+        on_change=_sync_setup_preferences,
     )
 
     personality = game["personality"]
@@ -219,6 +229,7 @@ def render_setup() -> None:
             "Choose computer personality",
             list(PERSONALITIES.keys()),
             key="ttt_setup_personality",
+            on_change=_sync_setup_preferences,
         )
 
         personality = PERSONALITIES[personality_label]
@@ -231,6 +242,7 @@ def render_setup() -> None:
                 min_value=CUSTOM_MINIMAX_DEPTH_MIN,
                 max_value=CUSTOM_MINIMAX_DEPTH_MAX,
                 key="ttt_setup_minimax_depth",
+                on_change=_sync_setup_preferences,
             )
         else:
             minimax_depth = game["minimax_depth"]
