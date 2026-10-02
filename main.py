@@ -17,6 +17,8 @@ from games.rock_paper_scissors import RockPaperScissorsGame
 from games.word_scramble import WordScrambleGame
 from games.snake import SnakeGame
 from games.minesweeper import MinesweeperGame
+from games.typing_test import TypingTestGame
+from games.mastermind import MastermindGame
 
 
 DATA_DIR = Path(".game_data")
@@ -83,6 +85,18 @@ GAME_REGISTRY = {
     "minesweeper": GameDefinition(
         "Minesweeper", "Reveal safe cells, flag mines, and clear the board",
         MinesweeperGame,
+        frozenset({"practice"}),
+        frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
+    ),
+    "typing_test": GameDefinition(
+        "Typing Test", "Measure typing speed and accuracy",
+        TypingTestGame,
+        frozenset({"practice"}),
+        frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
+    ),
+    "mastermind": GameDefinition(
+        "Mastermind", "Crack the hidden color code",
+        MastermindGame,
         frozenset({"practice"}),
         frozenset({"competitive", "practice"}), ("easy", "medium", "hard"),
     ),
