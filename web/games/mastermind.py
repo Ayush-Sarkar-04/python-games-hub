@@ -390,7 +390,7 @@ def render_game() -> None:
                             """,
                             unsafe_allow_html=True,
                         )
-                else:
+        else:
             st.markdown(
                 '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
                 unsafe_allow_html=True,
