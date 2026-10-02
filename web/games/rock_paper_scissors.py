@@ -76,7 +76,7 @@ def render_setup() -> None:
                            index=0 if game["match_type"] == "single" else 1,
                            horizontal=True)
     match_type = "single" if match_label == "Single Game" else "match"
-    rounds = st.slider("Number of rounds", 2, 10, max(2, min(10, game["rounds"]))) if match_type == "match" else 1
+    rounds = st.selectbox("Number of rounds", list(range(2, 11)), index=max(0, min(8, game["rounds"] - 2))) if match_type == "match" else 1
     difficulty_label = st.radio("Difficulty", ["Easy", "Medium", "Hard"],
                                 index=["easy", "medium", "hard"].index(game["difficulty"]),
                                 horizontal=True)
