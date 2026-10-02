@@ -130,15 +130,31 @@ def render_game() -> None:
             font-size: 1.45rem;
             font-weight: 800;
         }
-        .ws-hint {
-            text-align: center;
-            padding: 14px;
-            border-radius: 12px;
-            background: #1a202b;
-            border: 1px dashed #3b4352;
+        .ws-feedback-hint {
+            min-height: 42px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 9px 16px;
+            border-radius: 10px;
             margin: 12px 0;
-            font-size: 1rem;
+            background: #241f12;
+            border: 1px solid #5b4f1f;
+            color: #f4e7a1;
+            font-size: 0.9rem;
+        }
+        .ws-feedback-message {
+            flex: 1;
+            text-align: left;
+        }
+        .ws-hint-inline {
+            flex: 0 0 auto;
+            padding-left: 18px;
+            border-left: 1px solid #5b4f1f;
             letter-spacing: 0.08em;
+            white-space: nowrap;
         }
         .ws-stat {
             display: flex;
@@ -212,11 +228,20 @@ def render_game() -> None:
             unsafe_allow_html=True,
         )
 
-        if game["revealed"]:
-            st.markdown(
-                f'<div class="ws-hint">HINT &nbsp; {_render_hint(game)}</div>',
-                unsafe_allow_html=True,
-            )
+        feedback = ""
+        if game["last_guess"] == "invalid":
+            feedback = "Please enter letters only."
+        elif game["last_guess"] and game["last_guess"] != game["word"] and game["outcome"] is None:
+            feedback = "Not quite. Try again."
+
+        hint_text = _render_hint(game) if game["revealed"] else "—"
+        st.markdown(
+            f'<div class="ws-feedback-hint">'
+            f'<div class="ws-feedback-message">{feedback or " "}</div>'
+            f'<div class="ws-hint-inline">Hint: {hint_text}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
         stats = st.columns(2)
         with stats[0]:
@@ -231,18 +256,6 @@ def render_game() -> None:
                 f'<div class="ws-stat-value">{game["score"]}</div></div>',
                 unsafe_allow_html=True,
             )
-
-        feedback = ""
-        if game["last_guess"] == "invalid":
-            feedback = "Please enter letters only."
-        elif game["last_guess"] and game["last_guess"] != game["word"] and game["outcome"] is None:
-            feedback = "Not quite. Try again."
-
-        feedback_class = "ws-feedback" if feedback else "ws-feedback empty"
-        st.markdown(
-            f'<div class="{feedback_class}">{feedback or " "}</div>',
-            unsafe_allow_html=True,
-        )
 
         if game["outcome"] == "win":
             st.markdown(
