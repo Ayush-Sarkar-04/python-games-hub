@@ -6,6 +6,67 @@ import streamlit as st
 
 from games.snake import COLUMNS, DIRECTIONS, OPPOSITE, ROWS, DIFFICULTIES, FOOD_SCORE
 
+snake_keyboard = st.components.v2.component(
+    name="snake_keyboard_controls",
+    html='<div class="snake-keyboard">Keyboard controls active · Use ↑ ↓ ← →</div>',
+    css="""
+        .snake-keyboard {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border: 1px solid #303642;
+            border-radius: 10px;
+            background: #151922;
+            color: #d3d4c0;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+    """,
+    js="""
+        export default function({ setTriggerValue }) {
+            const directions = {
+                ArrowUp: "UP",
+                ArrowDown: "DOWN",
+                ArrowLeft: "LEFT",
+                ArrowRight: "RIGHT",
+            };
+
+            const handler = (event) => {
+                const direction = directions[event.key];
+                if (!direction) return;
+
+                const target = event.target;
+                if (
+                    target instanceof HTMLInputElement ||
+                    target instanceof HTMLTextAreaElement ||
+                    target instanceof HTMLSelectElement ||
+                    target?.isContentEditable
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (event.repeat) return;
+                setTriggerValue("move", direction);
+            };
+
+            if (window.__snakeKeyboardHandler) {
+                window.removeEventListener("keydown", window.__snakeKeyboardHandler);
+            }
+
+            window.__snakeKeyboardHandler = handler;
+            window.addEventListener("keydown", handler);
+
+            return () => {
+                window.removeEventListener("keydown", handler);
+                if (window.__snakeKeyboardHandler === handler) {
+                    delete window.__snakeKeyboardHandler;
+                }
+            };
+        }
+    """,
+)
+
 
 def _new_state() -> dict:
     snake = [(ROWS // 2, COLUMNS // 2), (ROWS // 2, COLUMNS // 2 - 1), (ROWS // 2, COLUMNS // 2 - 2)]
@@ -161,69 +222,158 @@ def _render_live_board() -> None:
 
 def render_game() -> None:
     game = _ensure_state()
+
     st.markdown(
         """
         <style>
-        .snake-board{display:grid;grid-template-columns:repeat(30,minmax(10px,1fr));
-        gap:2px;background:#0f131a;padding:8px;border-radius:14px;border:1px solid #303642;}
-        .snake-cell{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
-        border-radius:3px;font-size:12px;background:#171c25;color:transparent;}
-        .snake-head{background:#f3e4c9;color:#0a2947;font-weight:900;}
-        .snake-body{background:#778873;color:#f3e4c9;}
-        .food{background:#8b5e3c;color:#f3e4c9;font-size:10px;}
-        .snake-stat{padding:9px 14px;border:1px solid #303642;border-radius:10px;
-        background:#151922;display:flex;justify-content:space-between;}
+        .snake-board{
+            display:grid;
+            grid-template-columns:repeat(30,minmax(10px,1fr));
+            gap:2px;
+            background:#0f131a;
+            padding:8px;
+            border-radius:14px;
+            border:1px solid #303642;
+        }
+        .snake-cell{
+            aspect-ratio:1/1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:3px;
+            font-size:12px;
+            background:#171c25;
+            color:transparent;
+        }
+        .snake-head{
+            background:#f3e4c9;
+            color:#0a2947;
+            font-weight:900;
+        }
+        .snake-body{
+            background:#778873;
+            color:#f3e4c9;
+        }
+        .food{
+            background:#8b5e3c;
+            color:#f3e4c9;
+            font-size:10px;
+        }
+        .snake-stat{
+            padding:9px 14px;
+            border:1px solid #303642;
+            border-radius:10px;
+            background:#151922;
+            display:flex;
+            justify-content:space-between;
+        }
+        .snake-controls{
+            padding:16px;
+            border:1px solid #303642;
+            border-radius:14px;
+            background:#151922;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
     st.title("Snake")
     st.markdown(
         f"**{game['difficulty'].title()}** · "
         f"{'Wrap enabled' if game['wrap'] else 'Walls enabled'}"
     )
 
-    left, right = st.columns(2)
-    with left:
-        st.markdown(
-            f'<div class="snake-stat"><span>Score</span><strong>{game["score"]}</strong></div>',
-            unsafe_allow_html=True,
+    board_col, controls_col = st.columns([2, 1], gap="large")
+
+    with board_col:
+        stats = st.columns(2)
+        with stats[0]:
+            st.markdown(
+                f'<div class="snake-stat"><span>Score</span><strong>{game["score"]}</strong></div>',
+                unsafe_allow_html=True,
+            )
+        with stats[1]:
+            st.markdown(
+                f'<div class="snake-stat"><span>Length</span><strong>{len(game["snake"])}</strong></div>',
+                unsafe_allow_html=True,
+            )
+
+        _render_live_board()
+
+    with controls_col:
+        st.markdown('<div class="snake-controls">', unsafe_allow_html=True)
+        st.subheader("Controls")
+
+        keyboard = snake_keyboard(
+            key="snake_keyboard",
+            on_move_change=lambda: None,
         )
-    with right:
-        st.markdown(
-            f'<div class="snake-stat"><span>Length</span><strong>{len(game["snake"])}</strong></div>',
-            unsafe_allow_html=True,
+        if keyboard.move:
+            _move(keyboard.move)
+            st.rerun()
+
+        st.caption("Keyboard")
+        st.write("Use the arrow keys to steer the snake.")
+
+        up = st.columns([1, 1, 1])
+        with up[1]:
+            st.button(
+                "↑",
+                key="snake_up",
+                use_container_width=True,
+                on_click=_move,
+                args=("UP",),
+            )
+
+        middle = st.columns([1, 1, 1])
+        with middle[0]:
+            st.button(
+                "←",
+                key="snake_left",
+                use_container_width=True,
+                on_click=_move,
+                args=("LEFT",),
+            )
+        with middle[1]:
+            st.button(
+                "●",
+                key="snake_step",
+                use_container_width=True,
+                on_click=_tick,
+            )
+        with middle[2]:
+            st.button(
+                "→",
+                key="snake_right",
+                use_container_width=True,
+                on_click=_move,
+                args=("RIGHT",),
+            )
+
+        down = st.columns([1, 1, 1])
+        with down[1]:
+            st.button(
+                "↓",
+                key="snake_down",
+                use_container_width=True,
+                on_click=_move,
+                args=("DOWN",),
+            )
+
+        if st.button(
+            "Pause" if not game["paused"] else "Resume",
+            key="snake_pause",
+            use_container_width=True,
+        ):
+            game["paused"] = not game["paused"]
+            st.rerun()
+
+        st.caption(
+            "Each direction press advances one move. "
+            "The center button continues in the current direction."
         )
-
-    _render_live_board()
-
-    if game["outcome"] is not None:
-        return
-
-    st.subheader("Controls")
-    up = st.columns([1, 1, 1])
-    with up[1]:
-        st.button("↑", key="snake_up", use_container_width=True, on_click=_move, args=("UP",))
-    middle = st.columns([1, 1, 1])
-    with middle[0]:
-        st.button("←", key="snake_left", use_container_width=True, on_click=_move, args=("LEFT",))
-    with middle[1]:
-        st.button("●", key="snake_step", use_container_width=True, on_click=_tick)
-    with middle[2]:
-        st.button("→", key="snake_right", use_container_width=True, on_click=_move, args=("RIGHT",))
-    down = st.columns([1, 1, 1])
-    with down[1]:
-        st.button("↓", key="snake_down", use_container_width=True, on_click=_move, args=("DOWN",))
-
-    if st.button(
-        "Pause" if not game["paused"] else "Resume",
-        key="snake_pause",
-        use_container_width=True,
-    ):
-        game["paused"] = not game["paused"]
-        st.rerun()
-
-    st.caption("Each direction press advances one move. The center button continues in the current direction.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_snake() -> None:
