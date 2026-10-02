@@ -64,6 +64,14 @@ def _play_round(player: str) -> None:
         game["current_round"] += 1
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["variant"] = "standard" if st.session_state["rps_setup_variant"] == "Standard" else "extended"
+    game["match_type"] = "single" if st.session_state["rps_setup_match_type"] == "Single Game" else "match"
+    game["difficulty"] = st.session_state["rps_setup_difficulty"].lower()
+    game["personality"] = DIFFICULTY_PERSONALITY[game["difficulty"]]
+
+
 def render_setup() -> None:
     game = _ensure_state()
     st.title("Rock Paper Scissors")
@@ -84,6 +92,7 @@ def render_setup() -> None:
         ["Standard", "Lizard & Spock"],
         key="rps_setup_variant",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     variant = "standard" if variant_label == "Standard" else "extended"
     match_label = st.radio(
@@ -91,6 +100,7 @@ def render_setup() -> None:
         ["Single Game", "Fixed-Length Match"],
         key="rps_setup_match_type",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     match_type = "single" if match_label == "Single Game" else "match"
     if match_type == "match":
@@ -115,6 +125,7 @@ def render_setup() -> None:
         ["Easy", "Medium", "Hard"],
         key="rps_setup_difficulty",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     difficulty = difficulty_label.lower()
     if st.button("Start Game", type="primary", use_container_width=True):
