@@ -151,8 +151,8 @@ def render_game() -> None:
             font-family:monospace;
             white-space:pre;
             text-align:center;
-            font-size:1rem;
-            line-height:1.2;
+            font-size:1.55rem;
+            line-height:1.25;
             margin:4px 0 18px;
         }
         .hm-word{
@@ -160,7 +160,7 @@ def render_game() -> None:
             font-size:2rem;
             font-weight:800;
             letter-spacing:.22em;
-            padding:16px 8px 6px;
+            padding:18px 8px 6px;
         }
         .hm-stat{
             text-align:center;
@@ -179,6 +179,9 @@ def render_game() -> None:
             font-size:1.15rem;
             font-weight:800;
             margin-top:3px;
+        }
+        .hm-hint{
+            margin-top:12px;
         }
         </style>
         """,
@@ -210,12 +213,19 @@ def render_game() -> None:
             unsafe_allow_html=True,
         )
 
+        st.button(
+            "Hint: Used" if game["hint_used"] else "Hint: Available — Use Hint",
+            key="hangman_hint",
+            disabled=game["hint_used"],
+            on_click=_use_hint,
+            use_container_width=True,
+        )
+
     with right:
-        stats = st.columns(3)
+        stats = st.columns(2)
         values = [
             ("Attempts Left", game["max_attempts"] - game["attempts"]),
             ("Guessed", len(game["guessed"])),
-            ("Hint", "Used" if game["hint_used"] else "Available"),
         ]
         for col, (label, value) in zip(stats, values):
             with col:
@@ -224,16 +234,6 @@ def render_game() -> None:
                     f'<div class="hm-value">{value}</div></div>',
                     unsafe_allow_html=True,
                 )
-
-        hint_col, _ = st.columns([1, 2])
-        with hint_col:
-            st.button(
-                "Use Hint",
-                key="hangman_hint",
-                disabled=game["hint_used"],
-                on_click=_use_hint,
-                use_container_width=True,
-            )
 
         if game["message"] and game["outcome"] is None:
             st.info(game["message"])
