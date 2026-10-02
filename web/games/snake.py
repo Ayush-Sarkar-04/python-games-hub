@@ -1,6 +1,7 @@
 """Streamlit web implementation of Snake."""
 
 import random
+import time
 
 import streamlit as st
 
@@ -81,6 +82,7 @@ def _new_state() -> dict:
         "wrap": False,
         "paused": False,
         "message": "",
+        "last_tick": time.monotonic(),
     }
 
 
@@ -116,6 +118,7 @@ def _start_game(difficulty: str, wrap: bool) -> None:
         "wrap": wrap,
         "paused": False,
         "message": "",
+        "last_tick": time.monotonic(),
     })
 
 
@@ -124,12 +127,20 @@ def new_game() -> None:
     _start_game(game["difficulty"], game["wrap"])
 
 
+def _set_direction(direction: str) -> None:
+    game = _ensure_state()
+    if game["outcome"] is not None or game["paused"]:
+        return
+    if direction in DIRECTIONS and direction != OPPOSITE[game["direction"]]:
+        game["direction"] = direction
+
+
 def _move(direction=None) -> None:
     game = _ensure_state()
     if game["outcome"] is not None or game["paused"]:
         return
-    if direction and direction != OPPOSITE[game["direction"]]:
-        game["direction"] = direction
+    if direction:
+        _set_direction(direction)
 
     row, col = game["snake"][0]
     dr, dc = DIRECTIONS[game["direction"]]
@@ -205,14 +216,25 @@ def _board_html(game: dict) -> str:
     return '<div class="snake-board">' + "".join(rows) + "</div>"
 
 
-@st.fragment
+@st.fragment(run_every=0.04)
 def _render_live_board() -> None:
     game = _ensure_state()
     if game["screen"] != "game":
         return
-    st.markdown(_board_html(game), unsafe_allow_html=True)
+
     if game["outcome"] is None and not game["paused"]:
-        st.caption("Use the controls below to move one step at a time.")
+        now = time.monotonic()
+        interval = DIFFICULTIES[game["difficulty"]][1]
+        last_tick = game.get("last_tick", now)
+
+        if now - last_tick >= interval:
+            _move()
+            game["last_tick"] = now
+
+    st.markdown(_board_html(game), unsafe_allow_html=True)
+
+    if game["outcome"] is None and not game["paused"]:
+        st.caption("Use the arrow keys or controls to steer the snake.")
     if game["outcome"] is not None:
         if game["outcome"] == "win":
             st.success(f"You cleared the board! Score: {game['score']}")
@@ -287,6 +309,9 @@ def render_game() -> None:
     board_col, controls_col = st.columns([2, 1], gap="large")
 
     with board_col:
+        _render_live_board()
+
+    with controls_col:
         stats = st.columns(2)
         with stats[0]:
             st.markdown(
@@ -299,9 +324,6 @@ def render_game() -> None:
                 unsafe_allow_html=True,
             )
 
-        _render_live_board()
-
-    with controls_col:
         st.markdown('<div class="snake-controls">', unsafe_allow_html=True)
         st.subheader("Controls")
 
@@ -310,8 +332,7 @@ def render_game() -> None:
             on_move_change=lambda: None,
         )
         if keyboard.move:
-            _move(keyboard.move)
-            st.rerun()
+            _set_direction(keyboard.move)
 
         st.caption("Keyboard")
         st.write("Use the arrow keys to steer the snake.")
@@ -322,7 +343,7 @@ def render_game() -> None:
                 "↑",
                 key="snake_up",
                 use_container_width=True,
-                on_click=_move,
+                on_click=_set_direction,
                 args=("UP",),
             )
 
@@ -332,22 +353,22 @@ def render_game() -> None:
                 "←",
                 key="snake_left",
                 use_container_width=True,
-                on_click=_move,
+                on_click=_set_direction,
                 args=("LEFT",),
             )
         with middle[1]:
-            st.button(
-                "●",
-                key="snake_step",
-                use_container_width=True,
-                on_click=_tick,
+            st.markdown(
+                '<div style="height:38px;display:flex;align-items:center;'
+                'justify-content:center;border:1px solid #303642;border-radius:10px;'
+                'background:#151922;color:#778873;font-size:14px;">●</div>',
+                unsafe_allow_html=True,
             )
         with middle[2]:
             st.button(
                 "→",
                 key="snake_right",
                 use_container_width=True,
-                on_click=_move,
+                on_click=_set_direction,
                 args=("RIGHT",),
             )
 
@@ -357,7 +378,7 @@ def render_game() -> None:
                 "↓",
                 key="snake_down",
                 use_container_width=True,
-                on_click=_move,
+                on_click=_set_direction,
                 args=("DOWN",),
             )
 
@@ -367,12 +388,10 @@ def render_game() -> None:
             use_container_width=True,
         ):
             game["paused"] = not game["paused"]
+            game["last_tick"] = time.monotonic()
             st.rerun()
 
-        st.caption(
-            "Each direction press advances one move. "
-            "The center button continues in the current direction."
-        )
+        st.caption("The snake moves continuously. Use the arrow keys to change direction.")
         st.markdown('</div>', unsafe_allow_html=True)
 
 
