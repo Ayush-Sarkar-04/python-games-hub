@@ -112,8 +112,8 @@ def render_game() -> None:
         """
         <style>
         .block-container {
-            max-width: 1200px;
-            padding-top: 2.5rem;
+            max-width: 1400px;
+            padding-top: 5rem;
             padding-bottom: 2.5rem;
         }
         .rps-header {
