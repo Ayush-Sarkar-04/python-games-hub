@@ -27,8 +27,13 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
+        [data-testid="stMainBlockContainer"] {
+            max-width: 1100px !important;
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+        }
         .mm-shell {
-            max-width: 1050px;
+            max-width: 100%;
             margin: 0 auto;
         }
         .mm-hero {
@@ -77,7 +82,7 @@ def _inject_styles() -> None:
             border: 1px solid #2b3140;
             border-radius: 18px;
             padding: 22px;
-            margin-top: 14px;
+            margin-top: 12px;
         }
         .mm-panel-title {
             font-size: 0.82rem;
@@ -115,7 +120,8 @@ def _inject_styles() -> None:
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
-            margin-top: 4px;
+            margin-top: 10px;
+            width: 100%;
         }
         .mm-history {
             min-width: 0;
@@ -369,10 +375,10 @@ def render_game() -> None:
         )
 
         if game["history"]:
-            st.markdown('<div class="mm-guess-grid">', unsafe_allow_html=True)
+            history_cards = []
             for index, (guess, exact, misplaced) in enumerate(game["history"], start=1):
                 pegs = "".join(_peg(color) for color in guess)
-                st.markdown(
+                history_cards.append(
                     f"""
                     <div class="mm-history">
                         <div class="mm-attempt">#{index:02d}</div>
@@ -382,10 +388,12 @@ def render_game() -> None:
                             <span class="mm-badge">Misplaced {misplaced}</span>
                         </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(
+                '<div class="mm-guess-grid">' + "".join(history_cards) + "</div>",
+                unsafe_allow_html=True,
+            )
         else:
             st.markdown(
                 '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
@@ -393,24 +401,6 @@ def render_game() -> None:
             )
 
         st.markdown("</div>", unsafe_allow_html=True)
-
-    if game["outcome"] == "win":
-        st.markdown(
-            f'<div class="mm-result mm-result-win mm-shell">Code cracked. Score: {game["score"]}</div>',
-            unsafe_allow_html=True,
-        )
-    elif game["outcome"] == "loss":
-        code = "".join(_peg(color, "30px") for color in game["code"])
-        st.markdown(
-            f'<div class="mm-result mm-result-loss mm-shell">Code not cracked. The sequence was '
-            f'<span style="display:inline-flex;gap:7px;vertical-align:middle;margin-left:8px;">{code}</span></div>',
-            unsafe_allow_html=True,
-        )
-
-    if game["outcome"] is not None:
-        if st.button("Play Again", type="primary", use_container_width=True):
-            new_game()
-            st.rerun()
 
     if game["outcome"] == "win":
         st.markdown(
