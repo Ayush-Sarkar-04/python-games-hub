@@ -189,7 +189,7 @@ def render_game() -> None:
         unsafe_allow_html=True,
     )
 
-    left, center, right = st.columns([1, 4, 1])
+    left, center, right = st.columns([0.7, 4.6, 0.7])
     with center:
         st.title("Word Scramble")
         st.markdown(
