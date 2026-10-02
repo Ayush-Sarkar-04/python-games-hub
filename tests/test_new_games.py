@@ -144,3 +144,31 @@ def test_mastermind_play_loses_after_max_attempts(monkeypatch):
     assert result.outcome == "loss"
     assert result.score == 0
     assert result.moves == 10
+
+
+def test_new_games_update_competitive_statistics():
+    from engine.statistics import update_statistics
+
+    typing_result = GameResult(
+        game="typing_test",
+        outcome="finished",
+        difficulty="medium",
+        mode="competitive",
+        score=42,
+        metadata={"wpm": 55.5, "accuracy": 96.2},
+    )
+    mastermind_result = GameResult(
+        game="mastermind",
+        outcome="win",
+        difficulty="easy",
+        mode="competitive",
+        score=80,
+        metadata={"attempts": 3},
+    )
+    stats = update_statistics({}, typing_result)
+    stats = update_statistics(stats, mastermind_result)
+    assert stats["typing_test"]["tests"] == 1
+    assert stats["typing_test"]["best_wpm"] == 55.5
+    assert stats["typing_test"]["best_accuracy"] == 96.2
+    assert stats["mastermind"]["wins"] == 1
+    assert stats["mastermind"]["best_score"] == 80
