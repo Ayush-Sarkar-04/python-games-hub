@@ -76,7 +76,23 @@ def render_setup() -> None:
                            index=0 if game["match_type"] == "single" else 1,
                            horizontal=True)
     match_type = "single" if match_label == "Single Game" else "match"
-    rounds = st.selectbox("Number of rounds", list(range(2, 11)), index=max(0, min(8, game["rounds"] - 2))) if match_type == "match" else 1
+    if match_type == "match":
+        st.write("Number of rounds")
+        round_options = list(range(2, 11))
+        round_columns = st.columns(len(round_options))
+        for option, column in zip(round_options, round_columns):
+            with column:
+                if st.button(
+                    str(option),
+                    key=f"rps_round_{option}",
+                    type="primary" if game["rounds"] == option else "secondary",
+                    use_container_width=True,
+                ):
+                    game["rounds"] = option
+                    st.rerun()
+        rounds = game["rounds"]
+    else:
+        rounds = 1
     difficulty_label = st.radio("Difficulty", ["Easy", "Medium", "Hard"],
                                 index=["easy", "medium", "hard"].index(game["difficulty"]),
                                 horizontal=True)
