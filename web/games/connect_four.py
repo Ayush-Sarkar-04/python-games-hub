@@ -168,6 +168,27 @@ def _start_game(
         _computer_turn()
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["player_mode"] = (
+        "computer"
+        if st.session_state["connect_four_setup_player_mode"] == "Play against Computer"
+        else "player"
+    )
+    game["difficulty"] = {
+        "Easy": "easy", "Medium": "medium", "Hard": "hard", "Custom": "custom"
+    }[st.session_state["connect_four_setup_difficulty"]]
+    if game["player_mode"] == "computer":
+        game["first_player"] = (
+            PLAYER if st.session_state["connect_four_setup_first_player_computer"] == "You (X)" else COMPUTER
+        )
+    else:
+        game["first_player"] = (
+            PLAYER if st.session_state["connect_four_setup_first_player_player"] == "Player X" else "O"
+        )
+    game["minimax_depth"] = st.session_state["connect_four_setup_minimax_depth"]
+
+
 def render_setup() -> None:
     game = _ensure_state()
 
@@ -186,12 +207,13 @@ def render_setup() -> None:
                 "Easy": "easy", "Medium": "medium", "Hard": "hard", "Custom": "custom"
             }.items() if value == game["difficulty"]
         )
-    if "connect_four_setup_first_player" not in st.session_state:
-        st.session_state["connect_four_setup_first_player"] = (
-            "You (X)" if game["player_mode"] == "computer" and game["first_player"] == PLAYER
-            else "Computer (O)" if game["player_mode"] == "computer"
-            else "Player X" if game["first_player"] == PLAYER
-            else "Player O"
+    if "connect_four_setup_first_player_computer" not in st.session_state:
+        st.session_state["connect_four_setup_first_player_computer"] = (
+            "You (X)" if game["first_player"] == PLAYER else "Computer (O)"
+        )
+    if "connect_four_setup_first_player_player" not in st.session_state:
+        st.session_state["connect_four_setup_first_player_player"] = (
+            "Player X" if game["first_player"] == PLAYER else "Player O"
         )
     if "connect_four_setup_minimax_depth" not in st.session_state:
         st.session_state["connect_four_setup_minimax_depth"] = game["minimax_depth"]
@@ -201,6 +223,7 @@ def render_setup() -> None:
         ["Play against Computer", "Two Players"],
         key="connect_four_setup_player_mode",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
 
     player_mode = (
@@ -217,6 +240,7 @@ def render_setup() -> None:
             ["Easy", "Medium", "Hard", "Custom"],
             key="connect_four_setup_difficulty",
             horizontal=True,
+            on_change=_sync_setup_preferences,
         )
 
         difficulty = {
@@ -233,6 +257,7 @@ def render_setup() -> None:
                 min_value=CUSTOM_MINIMAX_DEPTH_MIN,
                 max_value=CUSTOM_MINIMAX_DEPTH_MAX,
                 key="connect_four_setup_minimax_depth",
+                on_change=_sync_setup_preferences,
             )
         else:
             minimax_depth = game["minimax_depth"]
@@ -246,8 +271,9 @@ def render_setup() -> None:
         first_player_label = st.radio(
             "Choose the first player",
             ["You (X)", "Computer (O)"],
-            key="connect_four_setup_first_player",
+            key="connect_four_setup_first_player_computer",
             horizontal=True,
+            on_change=_sync_setup_preferences,
         )
         first_player = (
             PLAYER
@@ -258,8 +284,9 @@ def render_setup() -> None:
         first_player_label = st.radio(
             "Choose the first player",
             ["Player X", "Player O"],
-            key="connect_four_setup_first_player",
+            key="connect_four_setup_first_player_player",
             horizontal=True,
+            on_change=_sync_setup_preferences,
         )
         first_player = (
             PLAYER
