@@ -250,8 +250,12 @@ def render_game() -> None:
         <style>
         .snake-board{
             display:grid;
-            grid-template-columns:repeat(30,minmax(10px,1fr));
+            grid-template-columns:repeat(30,minmax(0,1fr));
             gap:2px;
+            width:min(100%, calc((100vh - 330px) * 1.5));
+            max-height:calc(100vh - 330px);
+            margin:0 auto;
+            box-sizing:border-box;
             background:#0f131a;
             padding:8px;
             border-radius:14px;
