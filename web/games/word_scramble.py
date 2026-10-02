@@ -158,6 +158,24 @@ def render_game() -> None:
             font-weight: 800;
             margin-top: 4px;
         }
+        .ws-feedback {
+            min-height: 42px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin: 12px 0 16px 0;
+            background: #241f12;
+            border: 1px solid #5b4f1f;
+            color: #f4e7a1;
+            font-size: 0.9rem;
+        }
+        .ws-feedback.empty {
+            visibility: hidden;
+        }
         .ws-result {
             text-align: center;
             padding: 18px;
@@ -210,10 +228,17 @@ def render_game() -> None:
                 unsafe_allow_html=True,
             )
 
+        feedback = ""
         if game["last_guess"] == "invalid":
-            st.warning("Please enter letters only.")
+            feedback = "Please enter letters only."
         elif game["last_guess"] and game["last_guess"] != game["word"] and game["outcome"] is None:
-            st.warning("Not quite. Try again.")
+            feedback = "Not quite. Try again."
+
+        feedback_class = "ws-feedback" if feedback else "ws-feedback empty"
+        st.markdown(
+            f'<div class="{feedback_class}">{feedback or " "}</div>',
+            unsafe_allow_html=True,
+        )
 
         if game["outcome"] == "win":
             st.markdown(
