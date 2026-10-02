@@ -174,10 +174,23 @@ def render_setup() -> None:
 
     st.subheader("Game Mode")
 
+    if "ttt_setup_player_mode" not in st.session_state:
+        st.session_state["ttt_setup_player_mode"] = (
+            "Play against Computer" if game["player_mode"] == "computer" else "Two Players"
+        )
+    if "ttt_setup_difficulty" not in st.session_state:
+        st.session_state["ttt_setup_difficulty"] = next(
+            label for label, value in DIFFICULTIES.items() if value == game["difficulty"]
+        )
+    if "ttt_setup_personality" not in st.session_state:
+        st.session_state["ttt_setup_personality"] = game["personality"]
+    if "ttt_setup_minimax_depth" not in st.session_state:
+        st.session_state["ttt_setup_minimax_depth"] = game["minimax_depth"]
+
     player_mode_label = st.radio(
         "Choose how you want to play",
         ["Play against Computer", "Two Players"],
-        index=0 if game["player_mode"] == "computer" else 1,
+        key="ttt_setup_player_mode",
         horizontal=True,
     )
 
@@ -192,7 +205,7 @@ def render_setup() -> None:
     difficulty_label = st.radio(
         "Computer difficulty",
         list(DIFFICULTIES.keys()),
-        index=["easy", "medium", "hard", "custom"].index(game["difficulty"]),
+        key="ttt_setup_difficulty",
         horizontal=True,
         disabled=player_mode != "computer",
     )
@@ -205,7 +218,7 @@ def render_setup() -> None:
         personality_label = st.selectbox(
             "Choose computer personality",
             list(PERSONALITIES.keys()),
-            index=list(PERSONALITIES.keys()).index(game["personality"]),
+            key="ttt_setup_personality",
         )
 
         personality = PERSONALITIES[personality_label]
@@ -217,7 +230,7 @@ def render_setup() -> None:
                 "Minimax search depth",
                 min_value=CUSTOM_MINIMAX_DEPTH_MIN,
                 max_value=CUSTOM_MINIMAX_DEPTH_MAX,
-                value=game["minimax_depth"],
+                key="ttt_setup_minimax_depth",
             )
         else:
             minimax_depth = game["minimax_depth"]
