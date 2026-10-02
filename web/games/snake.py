@@ -177,14 +177,19 @@ def render_setup() -> None:
     st.title("Snake")
     st.caption("Guide the snake, eat food, and avoid the walls and yourself.")
 
+    if "snake_setup_difficulty" not in st.session_state:
+        st.session_state["snake_setup_difficulty"] = game["difficulty"].title()
+    if "snake_setup_wrap" not in st.session_state:
+        st.session_state["snake_setup_wrap"] = game["wrap"]
+
     difficulty_label = st.radio(
         "Difficulty",
         ["Easy", "Medium", "Hard"],
-        index=["easy", "medium", "hard"].index(game["difficulty"]),
+        key="snake_setup_difficulty",
         horizontal=True,
     )
     difficulty = difficulty_label.lower()
-    wrap = st.toggle("Wrap around walls", value=game["wrap"])
+    wrap = st.toggle("Wrap around walls", key="snake_setup_wrap")
 
     if st.button("Start Game", type="primary", use_container_width=True):
         _start_game(difficulty, wrap)
