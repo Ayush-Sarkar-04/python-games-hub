@@ -111,26 +111,33 @@ def _inject_styles() -> None:
             border: 2px solid rgba(255,255,255,.55);
             box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
         }
-        .mm-history {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 12px 0;
-            border-bottom: 1px solid #252b36;
+        .mm-guess-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 4px;
         }
-        .mm-history:last-child {
-            border-bottom: 0;
+        .mm-history {
+            min-width: 0;
+            background: #11151e;
+            border: 1px solid #292f3b;
+            border-radius: 12px;
+            padding: 10px;
         }
         .mm-attempt {
-            width: 30px;
             color: #7f899b;
             font-weight: 800;
-            font-size: 0.78rem;
+            font-size: 0.72rem;
+            margin-bottom: 8px;
         }
         .mm-pegs {
             display: flex;
-            gap: 7px;
-            flex: 1;
+            gap: 5px;
+            align-items: center;
+        }
+        .mm-pegs .mm-peg {
+            width: 24px;
+            height: 24px;
         }
         .mm-peg {
             width: 29px;
@@ -326,6 +333,7 @@ def render_game() -> None:
         )
 
         if game["history"]:
+            st.markdown('<div class="mm-guess-grid">', unsafe_allow_html=True)
             for index, (guess, exact, misplaced) in enumerate(game["history"], start=1):
                 pegs = "".join(_peg(color) for color in guess)
                 st.markdown(
@@ -333,7 +341,7 @@ def render_game() -> None:
                     <div class="mm-history">
                         <div class="mm-attempt">#{index:02d}</div>
                         <div class="mm-pegs">{pegs}</div>
-                        <div class="mm-feedback">
+                        <div class="mm-feedback" style="margin-top:8px;">
                             <span class="mm-badge">Exact {exact}</span>
                             <span class="mm-badge">Misplaced {misplaced}</span>
                         </div>
@@ -341,6 +349,7 @@ def render_game() -> None:
                     """,
                     unsafe_allow_html=True,
                 )
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.markdown(
                 '<div class="mm-empty">No guesses yet. Make your first attempt below.</div>',
