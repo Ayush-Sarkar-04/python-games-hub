@@ -100,6 +100,12 @@ def _use_hint() -> None:
         game["outcome"] = "loss"
 
 
+def _sync_setup_preferences() -> None:
+    game = _ensure_state()
+    game["category"] = st.session_state["hangman_setup_category"]
+    game["difficulty"] = st.session_state["hangman_setup_difficulty"].lower()
+
+
 def render_setup() -> None:
     game = _ensure_state()
     st.title("Hangman")
@@ -117,12 +123,14 @@ def render_setup() -> None:
         key="hangman_setup_category",
         format_func=lambda value: game["words"][value]["name"],
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     difficulty_label = st.radio(
         "Difficulty",
         ["Easy", "Medium", "Hard"],
         key="hangman_setup_difficulty",
         horizontal=True,
+        on_change=_sync_setup_preferences,
     )
     difficulty = difficulty_label.lower()
     settings = DIFFICULTIES[difficulty]
