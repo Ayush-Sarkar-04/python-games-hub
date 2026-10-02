@@ -5,6 +5,7 @@ import time
 import streamlit as st
 
 from games.typing_test import DIFFICULTIES, calculate_metrics, TypingTestGame
+from engine.game import SessionConfig
 
 
 def _ensure_state() -> dict:
@@ -18,7 +19,7 @@ def new_game() -> None:
     config = st.session_state.get("typing_test_config", {})
     difficulty = config.get("difficulty", game["difficulty"])
     core = TypingTestGame()
-    state = core.setup(type("Config", (), {"game": "typing_test", "difficulty": difficulty, "options": {}})())
+    state = core.setup(SessionConfig(game="typing_test", difficulty=difficulty, mode="practice"))
     game.update({"screen": "game", "difficulty": difficulty, "text": state.data["text"],
                  "duration": state.data["duration"], "started": None, "typed": "",
                  "metrics": None, "score": 0})
@@ -44,19 +45,9 @@ def render_setup() -> None:
         st.rerun()
 
 
-def render_game() -> None:
+@st.fragment(run_every=0.2)
+def _render_active_test() -> None:
     game = _ensure_state()
-    st.title("Typing Test")
-    st.caption(f"{game['difficulty'].title()} difficulty • {game['duration']} seconds")
-
-    if game["started"] is None:
-        st.markdown("### Type this passage")
-        st.code(game["text"])
-        if st.button("Begin Typing", type="primary", use_container_width=True):
-            game["started"] = time.monotonic()
-            st.rerun()
-        return
-
     elapsed = time.monotonic() - game["started"]
     remaining = max(0.0, game["duration"] - elapsed)
     st.progress(min(elapsed / game["duration"], 1.0))
@@ -74,26 +65,18 @@ def render_game() -> None:
     st.caption("Type exactly as shown. The test ends when you submit or the timer reaches zero.")
 
 
-def render_result() -> None:
+def render_game() -> None:
     game = _ensure_state()
-    metrics = game["metrics"]
-    st.title("Typing Test Result")
-    a, b, c = st.columns(3)
-    a.metric("WPM", metrics["wpm"])
-    b.metric("Accuracy", f"{metrics['accuracy']:.1f}%")
-    c.metric("Score", metrics["score"])
-    st.write(f"Correct characters: {metrics['correct_characters']} / {metrics['typed_characters']}")
-    st.write(f"Elapsed: {game['duration'] if game['typed'] == game['text'] else 'Recorded'}")
-    if st.button("Play Again", type="primary", use_container_width=True):
-        new_game()
-        st.rerun()
+    st.title("Typing Test")
+    st.caption(f"{game['difficulty'].title()} difficulty • {game['duration']} seconds")
 
+    if game["started"] is None:
+        st.markdown("### Type this passage")
+        st.code(game["text"])
+        if st.button("Begin Typing", type="primary", use_container_width=True):
+            game["started"] = time.monotonic()
+            st.rerun()
+        return
 
-def render_typing_test() -> None:
-    screen = _ensure_state()["screen"]
-    if screen == "setup":
-        render_setup()
-    elif screen == "game":
-        render_game()
-    else:
-        render_result()
+    _render_active_test()
+
