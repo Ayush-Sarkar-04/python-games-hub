@@ -1,0 +1,99 @@
+"""Streamlit UI for Typing Test."""
+
+import time
+
+import streamlit as st
+
+from games.typing_test import DIFFICULTIES, calculate_metrics, TypingTestGame
+
+
+def _ensure_state() -> dict:
+    if "typing_test" not in st.session_state:
+        st.session_state["typing_test"] = {"screen": "setup", "difficulty": "medium"}
+    return st.session_state["typing_test"]
+
+
+def new_game() -> None:
+    game = _ensure_state()
+    config = st.session_state.get("typing_test_config", {})
+    difficulty = config.get("difficulty", game["difficulty"])
+    core = TypingTestGame()
+    state = core.setup(type("Config", (), {"game": "typing_test", "difficulty": difficulty, "options": {}})())
+    game.update({"screen": "game", "difficulty": difficulty, "text": state.data["text"],
+                 "duration": state.data["duration"], "started": None, "typed": "",
+                 "metrics": None, "score": 0})
+    st.session_state["typing_test_input"] = ""
+
+
+def render_setup() -> None:
+    game = _ensure_state()
+    st.title("Typing Test")
+    st.caption("Type the passage accurately and quickly.")
+    if "typing_test_setup_difficulty" not in st.session_state:
+        st.session_state["typing_test_setup_difficulty"] = game["difficulty"].title()
+    difficulty_label = st.radio(
+        "Difficulty", ["Easy", "Medium", "Hard"],
+        key="typing_test_setup_difficulty", horizontal=True,
+    )
+    difficulty = difficulty_label.lower()
+    settings = DIFFICULTIES[difficulty]
+    st.write(f"**{settings['name']}** • {settings['duration']} seconds")
+    if st.button("Start Test", type="primary", use_container_width=True):
+        st.session_state["typing_test_config"] = {"difficulty": difficulty}
+        new_game()
+        st.rerun()
+
+
+def render_game() -> None:
+    game = _ensure_state()
+    st.title("Typing Test")
+    st.caption(f"{game['difficulty'].title()} difficulty • {game['duration']} seconds")
+
+    if game["started"] is None:
+        st.markdown("### Type this passage")
+        st.code(game["text"])
+        if st.button("Begin Typing", type="primary", use_container_width=True):
+            game["started"] = time.monotonic()
+            st.rerun()
+        return
+
+    elapsed = time.monotonic() - game["started"]
+    remaining = max(0.0, game["duration"] - elapsed)
+    st.progress(min(elapsed / game["duration"], 1.0))
+    st.markdown(f"**Time remaining:** {remaining:.1f}s")
+    typed = st.text_area("Your typing", key="typing_test_input", height=140)
+    submit = st.button("Submit Test", type="primary", use_container_width=True)
+    if submit or remaining <= 0:
+        metrics = calculate_metrics(game["text"], typed, min(elapsed, game["duration"]))
+        game["typed"] = typed
+        game["metrics"] = metrics
+        game["score"] = metrics["score"]
+        game["screen"] = "result"
+        st.rerun()
+
+    st.caption("Type exactly as shown. The test ends when you submit or the timer reaches zero.")
+
+
+def render_result() -> None:
+    game = _ensure_state()
+    metrics = game["metrics"]
+    st.title("Typing Test Result")
+    a, b, c = st.columns(3)
+    a.metric("WPM", metrics["wpm"])
+    b.metric("Accuracy", f"{metrics['accuracy']:.1f}%")
+    c.metric("Score", metrics["score"])
+    st.write(f"Correct characters: {metrics['correct_characters']} / {metrics['typed_characters']}")
+    st.write(f"Elapsed: {game['duration'] if game['typed'] == game['text'] else 'Recorded'}")
+    if st.button("Play Again", type="primary", use_container_width=True):
+        new_game()
+        st.rerun()
+
+
+def render_typing_test() -> None:
+    screen = _ensure_state()["screen"]
+    if screen == "setup":
+        render_setup()
+    elif screen == "game":
+        render_game()
+    else:
+        render_result()
