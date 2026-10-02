@@ -118,6 +118,19 @@ def update_statistics(statistics: dict[str, dict[str, Any]], result: GameResult)
         stats["best_score"] = max(stats.get("best_score", 0), result.score or 0)
         _record_streak(stats, result)
 
+    elif result.game == "typing_test":
+        stats["tests"] = stats.get("tests", 0) + 1
+        stats["best_wpm"] = max(stats.get("best_wpm", 0), result.metadata.get("wpm", 0))
+        stats["best_accuracy"] = max(stats.get("best_accuracy", 0), result.metadata.get("accuracy", 0))
+        stats["total_score"] = stats.get("total_score", 0) + (result.score or 0)
+
+    elif result.game == "mastermind":
+        stats["games"] = stats.get("games", 0) + 1
+        _increment_outcome(stats, result.outcome)
+        stats["total_score"] = stats.get("total_score", 0) + (result.score or 0)
+        stats["best_score"] = max(stats.get("best_score", 0), result.score or 0)
+        _record_streak(stats, result)
+
     else:
         return statistics
 
