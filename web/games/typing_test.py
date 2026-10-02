@@ -64,10 +64,8 @@ def _render_active_test() -> None:
     remaining = max(0.0, game["duration"] - elapsed)
 
     st.markdown("### Type the passage")
-    st.markdown(
-        f'<div class="typing-passage">{game["text"]}</div>',
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.write(game["text"])
 
     st.progress(min(elapsed / game["duration"], 1.0))
     timer_col, count_col = st.columns(2)
@@ -116,18 +114,5 @@ def render_game() -> None:
             st.rerun()
         return
 
-    st.markdown("""
-    <style>
-    .typing-passage {
-        padding: 1.1rem 1.25rem;
-        border: 1px solid rgba(128, 128, 128, 0.35);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.035);
-        line-height: 1.75;
-        font-size: 1.05rem;
-        margin-bottom: 1rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
     _render_active_test()
 
