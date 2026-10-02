@@ -105,7 +105,7 @@ NON_REAL_TIME_ACHIEVEMENT_RULES = {
 
 PROGRESSION_ACHIEVEMENT_DEFINITIONS = (
     AchievementDefinition("snake_200", "Snake 200", "Score more than 200 in a competitive Snake run."),
-    AchievementDefinition("all_seven_games", "Full House", "Play all seven games in competitive sessions."),
+    AchievementDefinition("all_nine_games", "Full House", "Play all nine games in competitive sessions."),
 )
 
 PROGRESSION_ACHIEVEMENT_RULES = {
@@ -116,9 +116,9 @@ PROGRESSION_ACHIEVEMENT_RULES = {
 }
 
 PROGRESSION_ACHIEVEMENT_CONTEXT_RULES = {
-    "all_seven_games": lambda result, context: (
+    "all_nine_games": lambda result, context: (
         result.mode == "competitive"
-        and len(context.get("games_played", set())) >= 7
+        and len(context.get("games_played", set())) >= 9
     ),
 }
 
