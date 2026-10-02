@@ -84,26 +84,164 @@ def render_setup() -> None:
 
 def render_game() -> None:
     game = _ensure_state()
-    st.title("Word Scramble")
-    st.caption(f"{game['difficulty'].title()} difficulty • Attempt {min(game['attempts'] + 1, MAX_ATTEMPTS)}/{MAX_ATTEMPTS}")
-    st.subheader("Unscramble this word")
-    st.markdown(f"### {'  '.join(game['scrambled'].upper())}")
-    if game["revealed"]: st.write(f"Hint: **{_render_hint(game)}**")
-    if game["last_guess"] == "invalid": st.warning("Please enter letters only.")
-    elif game["last_guess"] and game["last_guess"] != game["word"] and game["outcome"] is None:
-        st.warning("Not quite. Try again.")
-    if game["outcome"] == "win":
-        st.success(f"Correct! The word was **{game['word'].upper()}**. Score: **{game['score']}**")
-        return
-    if game["outcome"] == "loss":
-        st.error(f"Out of attempts. The word was **{game['word'].upper()}**.")
-        return
-    with st.form("word_scramble_guess_form"):
-        guess = st.text_input("Your guess", placeholder="Enter the unscrambled word")
-        if st.form_submit_button("Submit Guess", use_container_width=True):
-            _submit_guess(guess)
-            st.rerun()
 
+    st.markdown(
+        """
+        <style>
+        .ws-round {
+            display: inline-block;
+            padding: 7px 14px;
+            border-radius: 999px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            font-size: 0.85rem;
+            margin-bottom: 18px;
+        }
+        .ws-word-card {
+            text-align: center;
+            padding: 28px 24px;
+            border-radius: 18px;
+            background: #151922;
+            border: 1px solid #303642;
+            margin: 10px 0 18px 0;
+        }
+        .ws-label {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+        .ws-letters {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .ws-letter {
+            width: 46px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #202531;
+            border: 1px solid #3b4352;
+            font-size: 1.45rem;
+            font-weight: 800;
+        }
+        .ws-hint {
+            text-align: center;
+            padding: 14px;
+            border-radius: 12px;
+            background: #1a202b;
+            border: 1px dashed #3b4352;
+            margin: 12px 0;
+            font-size: 1rem;
+            letter-spacing: 0.08em;
+        }
+        .ws-stat {
+            text-align: center;
+            padding: 14px 10px;
+            border-radius: 14px;
+            background: #151922;
+            border: 1px solid #303642;
+        }
+        .ws-stat-label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .ws-stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+        .ws-result {
+            text-align: center;
+            padding: 18px;
+            border-radius: 14px;
+            background: #151922;
+            border: 1px solid #303642;
+            margin: 16px 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    left, center, right = st.columns([1, 4, 1])
+    with center:
+        st.title("Word Scramble")
+        st.markdown(
+            f'<div class="ws-round">ATTEMPT {min(game["attempts"] + 1, MAX_ATTEMPTS)} / {MAX_ATTEMPTS}'
+            f' &nbsp; • &nbsp; {game["difficulty"].upper()}</div>',
+            unsafe_allow_html=True,
+        )
+
+        letters = "".join(
+            f'<div class="ws-letter">{letter}</div>'
+            for letter in game["scrambled"].upper()
+        )
+        st.markdown(
+            f'<div class="ws-word-card"><div class="ws-label">Unscramble the word</div>'
+            f'<div class="ws-letters">{letters}</div></div>',
+            unsafe_allow_html=True,
+        )
+
+        if game["revealed"]:
+            st.markdown(
+                f'<div class="ws-hint">HINT &nbsp; {_render_hint(game)}</div>',
+                unsafe_allow_html=True,
+            )
+
+        stats = st.columns(2)
+        with stats[0]:
+            st.markdown(
+                f'<div class="ws-stat"><div class="ws-stat-label">Attempts Used</div>'
+                f'<div class="ws-stat-value">{game["attempts"]} / {MAX_ATTEMPTS}</div></div>',
+                unsafe_allow_html=True,
+            )
+        with stats[1]:
+            st.markdown(
+                f'<div class="ws-stat"><div class="ws-stat-label">Current Score</div>'
+                f'<div class="ws-stat-value">{game["score"]}</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        if game["last_guess"] == "invalid":
+            st.warning("Please enter letters only.")
+        elif game["last_guess"] and game["last_guess"] != game["word"] and game["outcome"] is None:
+            st.warning("Not quite. Try again.")
+
+        if game["outcome"] == "win":
+            st.markdown(
+                f'<div class="ws-result"><strong>CORRECT!</strong><br>'
+                f'The word was <strong>{game["word"].upper()}</strong><br>'
+                f'Score: <strong>{game["score"]}</strong></div>',
+                unsafe_allow_html=True,
+            )
+            return
+
+        if game["outcome"] == "loss":
+            st.markdown(
+                f'<div class="ws-result"><strong>OUT OF ATTEMPTS</strong><br>'
+                f'The word was <strong>{game["word"].upper()}</strong></div>',
+                unsafe_allow_html=True,
+            )
+            return
+
+        st.subheader("Your guess")
+        with st.form("word_scramble_guess_form"):
+            guess = st.text_input(
+                "Enter the unscrambled word",
+                placeholder="Type your answer here...",
+                label_visibility="collapsed",
+            )
+            if st.form_submit_button("SUBMIT GUESS", use_container_width=True, type="primary"):
+                _submit_guess(guess)
+                st.rerun()
 
 def render_word_scramble() -> None:
     if _ensure_state()["screen"] == "setup": render_setup()
