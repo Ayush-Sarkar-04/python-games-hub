@@ -1,6 +1,6 @@
 # Python Games Hub
 
-A complete terminal-based Python game platform containing seven independently
+A complete terminal-based Python game platform containing nine independently
 runnable games, a shared session/configuration layer, standardized game state
 and results, persistent player systems, competitive statistics, achievements,
 progression, Quick Play, and configurable terminal presentation.
@@ -12,6 +12,10 @@ collection consistent, testable, and persistent.
 The implementation favors straightforward Python and standard-library
 components at runtime. Shared infrastructure is centralized where it genuinely
 belongs, while game-specific mechanics remain inside their own modules.
+
+**Current verified status (2026-10-14):** The repository contains nine games. The
+full test suite passes with 130 tests. The public `main` branch is maintained as
+a single root commit; this history choice does not change runtime behavior.
 
 ## Games
 
@@ -35,17 +39,25 @@ belongs, while game-specific mechanics remain inside their own modules.
 - **Minesweeper** — Hidden-mine grid, first-click safety, safe-cell reveals,
   flood reveal, flagging, difficulty-based boards, scoring, and win/loss
   detection.
+- **Typing Test** — Terminal typing challenge that measures typing performance
+  and reports a session result.
+- **Mastermind** — Code-breaking logic game in which the player uses feedback
+  from guesses to identify the hidden code.
 
-All seven games are connected to the hub and remain independently runnable.
+All nine games are connected to the hub and remain independently runnable.
 
 ------------------------------------------------------------------------
 
 ## Architecture
 
-``` text
+```text
 python-games-hub/
 ├── main.py
 ├── pytest.ini
+├── requirements.txt
+├── .gitignore
+├── README.md
+├── PROJECT DOCUMENTATION.md
 ├── engine/
 │   ├── __init__.py
 │   ├── game.py
@@ -61,22 +73,24 @@ python-games-hub/
 │   ├── __init__.py
 │   ├── tic_tac_toe.py
 │   ├── connect_four.py
-│   ├── rock_paper_scissors.py
 │   ├── hangman.py
+│   ├── rock_paper_scissors.py
 │   ├── word_scramble.py
-│   └── snake.py
-├── tests/
-│   ├── test_games.py
-│   ├── test_game.py
-│   ├── test_result.py
-│   ├── test_state.py
-│   ├── test_utils.py
-│   ├── test_persistence.py
-│   ├── test_systems.py
-│   ├── test_registry.py
-│   └── test_flow.py
-├── README.md
-└── .gitignore
+│   ├── snake.py
+│   ├── minesweeper.py
+│   ├── typing_test.py
+│   └── mastermind.py
+└── tests/
+    ├── test_flow.py
+    ├── test_game.py
+    ├── test_games.py
+    ├── test_new_games.py
+    ├── test_persistence.py
+    ├── test_registry.py
+    ├── test_result.py
+    ├── test_state.py
+    ├── test_systems.py
+    └── test_utils.py
 ```
 
 Runtime player data is stored separately under `.game_data/` and is
@@ -502,6 +516,8 @@ python games/rock_paper_scissors.py
 python games/word_scramble.py
 python games/snake.py
 python games/minesweeper.py
+python games/typing_test.py
+python games/mastermind.py
 ```
 
 ### Run the test suite
@@ -517,7 +533,7 @@ consistently for test execution.
 
 ## Testing
 
-The current regression suite contains **119 passing tests** covering the games, shared engine, hub flow, persistence, and cross-system integration.
+The current regression suite contains **130 passing tests** covering the games, shared engine, hub flow, persistence, and cross-system integration.
 
 The project has a centralized game test suite plus separate tests for
 the shared engine and infrastructure.
@@ -534,7 +550,7 @@ Coverage includes:
 -   Achievements
 -   Settings
 -   Hub flow
--   All seven games
+-   All nine games, including Mastermind and Typing Test
 -   Difficulty behavior
 -   Custom configuration bounds
 -   Practice-mode isolation
@@ -559,7 +575,7 @@ Coverage includes:
     interface.
 -   Keep the registry static and predictable.
 -   Prefer straightforward Python over unnecessary abstraction.
--   Keep all seven games independently runnable.
+-   Keep all nine games independently runnable.
 -   Keep competitive progression aggregate and cosmetic-only.
 -   Keep Practice mode isolated from competitive records.
 -   Validate configuration at the appropriate layer rather than silently
@@ -764,7 +780,7 @@ Practice    → Gameplay only
 **Reason:** XP or levels should not alter AI, difficulty, scoring, mechanics,
 or competitive advantages.
 
-**Result:** Progression connects the seven games without becoming a hidden
+**Result:** Progression connects the nine games without becoming a hidden
 gameplay system.
 
 ## 13. Player Systems Have Clear Boundaries
@@ -1121,10 +1137,9 @@ games.
 **Reason:** Shared contracts mean changes to results, configuration,
 persistence, or registry behavior can affect unrelated games.
 
-**Final baseline:** **119 passing tests.**
+**Final baseline:** **130 passing tests.**
 
-The exact count is less important than maintaining a green full-suite result
-after the final integration and cleanup work.
+The current verified baseline is 130 passing tests. Re-run the full suite after changes and update this number whenever the suite changes.
 
 ------------------------------------------------------------------------
 
@@ -1166,15 +1181,17 @@ is more valuable than hypothetical third-party extensibility.
 Minesweeper through one universal engine would create abstraction rather than
 reduce it.
 
-## 39. No Game Eight
+## 39. Historical Scope Decision: Stop at Seven Games (Superseded)
 
-**Decision:** Stop at seven games.
+**Historical decision:** After Minesweeper was integrated, the plan was to stop
+at seven games because the architectural extension test had succeeded.
 
-**Reason:** Once Minesweeper demonstrated that a genuinely different game
-could enter the platform without redesigning the core, another game would
-primarily increase scope rather than provide new architectural evidence.
+**What changed:** The project later expanded to include Mastermind and Typing
+Test. The earlier seven-game scope decision is retained here as development
+history, not as a description of the current release.
 
-**Result:** Seven games are the deliberate final product scope.
+**Current result:** The final repository contains nine games, all connected to
+the terminal hub and covered by the current regression suite.
 
 ------------------------------------------------------------------------
 
@@ -1248,7 +1265,7 @@ release packages.
 
 ## 44. Feature Complete Is Not Release Complete
 
-The project was not considered complete merely because all seven games could
+The project was not considered complete merely because all nine games could
 launch.
 
 The completion path was:
@@ -1321,5 +1338,5 @@ The platform is unified where unification improves consistency, testing,
 persistence, and extension. The games remain distinct where their mechanics
 actually differ.
 
-That is the intended final product: **seven different terminal games operating
+That is the intended final product: **nine different terminal games operating
 as one coherent Python game platform.**
