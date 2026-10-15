@@ -7,7 +7,9 @@ progression, Quick Play, and configurable terminal presentation.
 
 The project is designed as one coherent product: each game keeps its own rules
 and personality while the platform provides the common systems that make the
-collection consistent, testable, and persistent.
+collection consistent, testable, and persistent. The public repository also
+uses GitHub Actions to run the regression suite on pushes and pull requests to
+`main`, with manual workflow dispatch available.
 
 The implementation favors straightforward Python and standard-library
 components at runtime. Shared infrastructure is centralized where it genuinely
@@ -526,14 +528,26 @@ python games/mastermind.py
 python -m pytest -q
 ```
 
+### Continuous Integration
+
+The workflow at `.github/workflows/tests.yml` runs the automated test suite on
+GitHub Actions when code is pushed to `main`, when a pull request targets
+`main`, or when the workflow is started manually. It checks out the repository,
+sets up Python 3.10, installs dependencies from `requirements.txt`, and runs
+`python -m pytest -q`.
+
+The workflow is a test gate, not a deployment pipeline: it does not publish a
+package or deploy a web application.
+
 The repository includes `pytest.ini` so the project root is configured
-consistently for test execution.
+consistently for test execution. The only declared development/test dependency
+is `pytest` (see `requirements.txt`); gameplay uses the Python standard library.
 
 ------------------------------------------------------------------------
 
 ## Testing
 
-The current regression suite contains **130 passing tests** covering the games, shared engine, hub flow, persistence, and cross-system integration.
+The verified regression baseline is **130 passing tests** covering the games, shared engine, hub flow, persistence, and cross-system integration. GitHub Actions runs this suite in CI on Python 3.10.
 
 The project has a centralized game test suite plus separate tests for
 the shared engine and infrastructure.
@@ -737,7 +751,7 @@ Hint simulation     → do not record
 
 **Decision:** Use one explicit `GAME_REGISTRY`.
 
-**Reason:** Seven games do not justify dynamic discovery or a plugin ecosystem.
+**Reason:** Nine games do not currently justify dynamic discovery or a plugin ecosystem.
 Dynamic plugins would add indirection, configuration, failure modes, and
 testing requirements without solving a current product problem.
 
@@ -941,7 +955,7 @@ just an increase in the game count.
 **Decision:** Choose Minesweeper instead of another game that mostly
 recombined existing mechanics.
 
-**Reason:** The existing collection already covered:
+**Reason:** The collection at that point already covered:
 
 ```text
 Board / turns     → Tic-Tac-Toe, Connect Four
@@ -1127,8 +1141,8 @@ GameResult
 Platform systems
 ```
 
-**Result:** Game seven was verified through the same path as the existing
-games.
+**Result:** Minesweeper was verified through the same path as the existing
+games. This is retained as a historical milestone; the current project has nine games.
 
 ## 33. Full Regression Is the Final Safety Net
 
@@ -1170,7 +1184,7 @@ different project.
 
 **Decision:** Keep the registry explicit.
 
-**Reason:** Seven games do not justify a dynamic plugin system. Predictability
+**Reason:** Nine games do not currently justify a dynamic plugin system. Predictability
 is more valuable than hypothetical third-party extensibility.
 
 ## 38. No Universal Game Engine
@@ -1297,10 +1311,9 @@ Each layer protects a different part of the product.
 **Decision:** Stop feature development after Minesweeper integration and full
 regression.
 
-**Reason:** Once the architectural extension test passed, further features
-had diminishing value and increasing regression risk.
+**Historical reason:** After Minesweeper established the shared integration path, feature development was temporarily frozen to prioritize release quality. The project subsequently expanded to nine games, including Typing Test and Mastermind.
 
-The remaining work became release quality rather than new functionality.
+The current priority is reliability, documentation, and regression prevention rather than adding unnecessary platform complexity.
 
 ## 46. Final Architectural Principle
 
@@ -1322,7 +1335,7 @@ That principle explains the final structure:
        │               │                │
        └───────────────┼────────────────┘
                        ↓
-                 Seven games
+                 Nine games
                        │
           ┌────────────┼────────────┐
           ↓            ↓            ↓
